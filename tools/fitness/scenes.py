@@ -107,8 +107,11 @@ def scene_config(project, segment: dict) -> dict:
         config[name] = item
 
     _extended_components(project, scene, config, overrides, beats, seconds, sid)
-    if project.brief.get("tag") and scene.get("tag", True) is not False:
-        config["tag"] = project.brief["tag"]
+    tag = project.tags()[sid]
+    if tag["text"]:
+        config["tag"] = tag["text"]
+        if tag["from"] is not None:  # a new main idea starts here: the heading swaps at the cut
+            config["tagFrom"] = tag["from"]
 
     texts = scene.get("text") or []
     text_overrides = overrides.get("text") or {}

@@ -193,10 +193,14 @@ def review_cmd(args) -> None:
     sha = project.gate_digest(args.gate)
     lines = [f"# {project.brief['title']} — {args.gate} review", ""]
     if args.gate == "content":
-        tag = project.brief.get("tag")
-        lines += [f"Aspect {project.brief['aspect']}; audience: {project.brief.get('audience', '')}",
-                  f"Pinned tag (top-left on every scene): {tag}" if tag else "Pinned tag: MISSING - set brief.tag (e.g. 'Tendons · Full guide · At home · No gym') before approval",
-                  "", "## Script and scenes", ""]
+        sections = project.tag_sections()
+        lines += [f"Aspect {project.brief['aspect']}; audience: {project.brief.get('audience', '')}"]
+        if sections:
+            lines += ["Pinned heading tag (top-left; one per main idea, also the YouTube chapters):",
+                      *[f"- from {s['segment_id']}: {s['tag']}" for s in sections]]
+        else:
+            lines.append("Pinned heading tag: MISSING - set brief.tag and a `tag` on the first scene of each main idea before approval")
+        lines += ["", "## Script and scenes", ""]
         for segment in project.segments:
             scene = project.scene_for(segment["id"])
             lines += [f"### {segment['id']}", segment["text"], ""]
@@ -451,7 +455,7 @@ def main() -> None:
     init.add_argument("--title", required=True)
     init.add_argument("--aspect", required=True, choices=sorted(projects.ASPECTS))
     init.add_argument("--voice", help="voice preset from channel voice.presets (default: the channel default)")
-    init.add_argument("--tag", help='pinned top-left title line, e.g. "Tendons · Full guide · At home · No gym"')
+    init.add_argument("--tag", help='opening heading pinned top-left, e.g. "Grip · Full guide · At home"; later main ideas set "tag" on their first scene')
     with_project("status", status_cmd)
     review = with_project("review", review_cmd)
     review.add_argument("--gate", required=True, choices=projects.GATES)

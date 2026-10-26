@@ -38,4 +38,4 @@ Bộ làm việc Windows dùng với **Claude Desktop** (hoặc Codex):
 
 Bộ kit không chứa API key, tài khoản, hồ sơ kênh, nhân vật, video hay nhạc của tác giả. Mỗi người dùng tự nhập key và kết nối tài khoản của mình.
 
-Phiên bản 0.3.0 vẫn là **prerelease**: chưa chạy end-to-end trên một máy sạch. Xem [CHANGELOG](CHANGELOG.md).
+Phiên bản 0.3.1 vẫn là **prerelease**: chưa chạy end-to-end trên một máy sạch. Xem [CHANGELOG](CHANGELOG.md).

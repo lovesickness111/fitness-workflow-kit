@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 (prerelease)
+
+- Fitness: tag ở góc trên bên trái giờ đổi theo từng ý chính của video, giống heading trong văn bản.
+  - `brief.tag` là heading mở đầu. Cảnh đầu tiên của mỗi ý mới ghi `"tag": "<heading mới>"`, và heading đó giữ nguyên cho các cảnh sau tới khi có cảnh khác đổi. `"tag": false` vẫn chỉ ẩn ở đúng cảnh đó.
+  - Ở cảnh đổi heading, dòng cũ trượt lên và mờ đi, dòng mới trượt vào trong khoảng 0,5 giây. Trong cùng một ý, heading đứng yên.
+  - Bước duyệt nội dung in danh sách heading và cảnh bắt đầu của mỗi heading.
+  - `notes` lấy các heading làm chương YouTube, bỏ phần chung của mọi heading (ví dụ "Grip"). Nếu chưa đủ 3 chương cách nhau ít nhất 10 giây thì quay về cách chia theo nhóm segment như trước.
+  - Video chỉ có một tag, như tendon-holds, vẫn hiển thị như cũ.
+
 ## 0.3.0 (prerelease)
 
 - Bàn giao cho Claude Desktop:

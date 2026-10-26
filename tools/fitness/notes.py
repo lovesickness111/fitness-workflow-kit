@@ -18,6 +18,15 @@ def _clock(seconds: float) -> str:
     return f"{int(seconds // 60)}:{int(seconds % 60):02d}"
 
 
+def _shared_prefix(tags: list[str]) -> int:
+    """How many leading " · " items every heading shares (e.g. "Grip · Forearms", "Grip · Fingers" -> 1)."""
+    parts = [t.split(" · ") for t in tags]
+    count = 0
+    while all(len(p) > count + 1 and p[count] == parts[0][count] for p in parts):
+        count += 1
+    return count
+
+
 def draft(project) -> dict:
     scenes = {s["segment_id"]: s for s in project.storyboard["scenes"]}
 
@@ -27,21 +36,35 @@ def draft(project) -> dict:
                 return scene[key][field]
         return None
 
-    # One chapter per segment group (the id prefix before the first hyphen, e.g. "wall-setup" -> "wall").
-    groups, cursor = [], 0.0
+    starts, cursor = {}, 0.0
+    for segment in project.segments:
+        starts[segment["id"]] = cursor
+        cursor += project.state["audio"].get(segment["id"], {}).get("seconds", 0)
+
+    def merged(items):  # merge chapters shorter than 10 s into the previous one
+        chapters = []
+        for start, label in items:
+            if not (chapters and start - chapters[-1][0] < 10):
+                chapters.append((start, label))
+        return chapters
+
+    # Chapters follow the heading tags when the video has them; the intro before the first heading belongs to it.
+    sections = project.tag_sections()
+    shared = _shared_prefix([s["tag"] for s in sections]) if len(sections) > 1 else 0
+    headed = merged([(0.0 if i == 0 else starts[s["segment_id"]], " · ".join(s["tag"].split(" · ")[shared:]) or s["tag"])
+                     for i, s in enumerate(sections)])
+    # Otherwise one chapter per segment group (the id prefix before the first hyphen, e.g. "wall-setup" -> "wall").
+    groups = []
     for segment in project.segments:
         group = segment["id"].split("-")[0]
         if not groups or groups[-1]["group"] != group:
-            groups.append({"group": group, "start": cursor, "label": None})
+            groups.append({"group": group, "start": starts[segment["id"]], "label": None})
         groups[-1]["label"] = groups[-1]["label"] or label_of(scenes[segment["id"]])
-        cursor += project.state["audio"].get(segment["id"], {}).get("seconds", 0)
-    chapters = []
-    for g in groups:  # merge chapters shorter than 10 s into the previous one
-        if chapters and g["start"] - chapters[-1][0] < 10:
-            continue
-        chapters.append((g["start"], g["label"] or g["group"].replace("_", " ").capitalize()))
+    grouped = merged([(g["start"], g["label"] or g["group"].replace("_", " ").capitalize()) for g in groups])
     # YouTube chapters need at least three, starting at 0:00, each at least 10 s long.
-    usable = len(chapters) >= 3 and chapters[0][0] == 0 and all(b[0] - a[0] >= 10 for a, b in zip(chapters, chapters[1:]))
+    valid = lambda c: len(c) >= 3 and c[0][0] == 0 and all(b[0] - a[0] >= 10 for a, b in zip(c, c[1:]))
+    chapters = headed if valid(headed) else grouped
+    usable = valid(chapters)
     claims = project.claims.get("claims", [])
     research = []
     for source in project.sources.get("sources", []):

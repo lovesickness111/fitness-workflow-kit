@@ -43,11 +43,14 @@ References: [style guide](references/style-guide.md) (palette, pose prompts, lay
 
 Approvals: `review --gate X` records the digest of what it printed. `approve --gate X --decision "<actual reply>"` binds to that digest and refuses if files changed after the review. Never approve something you have not presented.
 
-1. **Init**: ask 9:16 or 16:9 if the user has not said; `init --project <slug> --title ... --aspect 9:16|16:9 --tag "<Topic · Format · Setting>" [--voice <preset>]`. The content review prints the tag, or MISSING if there is none.
+1. **Init**: ask 9:16 or 16:9 if the user has not said; `init --project <slug> --title ... --aspect 9:16|16:9 --tag "<Topic · Format · Setting>" [--voice <preset>]`. The content review lists the heading tags and where each starts, or MISSING if there is none.
 2. **Content** (write the files; nothing is generated yet):
    - `brief.json`: audience, viewer promise, target length, and `tag`.
-     - `tag` is the pinned title line shown small in the top-left corner of every scene, after a red bar. Write 3–5 short items joined by " · ": topic, format, setting, promise. For example "Tendons · Full guide · At home · No gym", or "Grip · Full guide · At home · No gym".
-     - Always set it for new videos. Hide it on a scene with `"tag": false`, for example a full-screen title card.
+     - The pinned tag is a heading shown small in the top-left corner after a red bar. It changes with each main idea of the video, like the headings of a document, and stays still within one idea.
+     - `brief.tag` is the opening heading, for example "Grip · Full guide · At home · No gym". On the first scene of each later main idea, set `"tag": "<new heading>"`, for example "Grip · Part 2 · Fingers". It carries forward to the following scenes until another scene changes it.
+     - Write 2–5 short items joined by " · " (topic, part or idea, setting). Keep the topic item the same so the series reads as one video. Change the heading only at main ideas, usually 3–6 per video and at least 10 s apart, never every scene.
+     - Hide it on one scene with `"tag": false`, for example a full-screen title card.
+     - Where it changes, the old line slides out and the new one slides in at the cut. The publishing notes use these headings as YouTube chapters, minus the items every heading shares. Always set the headings for new videos.
    - `research/sources.json` and `research/claims.json`: every number, percentage, physiological claim or training prescription is a claim with sources the user can check. Prefer primary research, position stands and reputable coaching bodies. Do not invent statistics; no source means no chart.
    - Put the DOI in each locator and run `research`, which resolves every DOI on Crossref and compares titles. A resolved DOI proves the paper exists, not that it supports the claim: read the abstract (Europe PMC REST works without cookies) and quote the claim precisely, with sample size where it matters.
    - `script.json`: English spoken text per segment (one segment = one scene, usually 1–3 sentences). Short, concrete, energetic coaching voice. Put delivery hints in `delivery`, never in `text`.

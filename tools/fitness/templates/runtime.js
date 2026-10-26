@@ -244,11 +244,24 @@
     });
   }
 
-  // -- pinned title tag: static, so it stays put across scene cuts ---------------
+  // -- pinned heading tag: static within a main idea, so it stays put across scene cuts ------
+  // Where a new main idea starts (S.tagFrom set), the old line slides out and the new one slides in.
   if (S.tag) {
     const e = el('div', 'abs tag'); place(e, LAYOUT.tag);
-    e.style.fontSize = px(W * (S.aspect === '9:16' ? .024 : .0125));
-    el('span', 'bar', e); el('span', 'text', e).textContent = S.tag;
+    const size = W * (S.aspect === '9:16' ? .024 : .0125);
+    e.style.fontSize = px(size);
+    el('span', 'bar', e);
+    const lines = el('span', 'lines', e), now = el('span', 'text', lines); now.textContent = S.tag;
+    if (S.tagFrom != null) {
+      const old = S.tagFrom ? el('span', 'text old', lines) : null;
+      if (old) old.textContent = S.tagFrom;
+      updates.push(t => {
+        const out = eo((t - .05) / .22), into = eo((t - .18) / .35);
+        if (old) { old.style.opacity = (1 - out).toFixed(3); old.style.transform = `translateY(${px(-out * size * .9)})`; }
+        now.style.opacity = into.toFixed(3); now.style.transform = `translateX(${px((1 - into) * size * 1.6)})`;
+        if (!old) e.style.opacity = into.toFixed(3);  // after a scene without a tag, the bar arrives with the line
+      });
+    }
   }
 
   // -- title card ------------------------------------------------------------

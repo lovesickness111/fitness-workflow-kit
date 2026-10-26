@@ -490,7 +490,48 @@ class EndToEndTests(unittest.TestCase):
                 poses.generate(project)
             config = scenes.scene_config(project, project.segments[1])
             self.assertEqual(config["tag"], "Grip · Full guide · At home · No gym")
+            self.assertNotIn("tagFrom", config, "one heading for the whole video stays static")
             self.assertTrue(scenes.stills(project, "hold", [1.0])[0].is_file())
+
+    def test_heading_tags_change_per_main_idea(self):
+        make_channel()
+        directory = projects.init("headings-test", "Headings", "16:9", tag="Grip · Forearms · At home")
+        write_json(directory / "research/sources.json", {"sources": []})
+        write_json(directory / "research/claims.json", {"claims": []})
+        ids = ("intro", "fingers", "card", "plan")
+        write_json(directory / "script.json", {"segments": [{"id": s, "text": "One short line. Then another."} for s in ids]})
+        write_json(directory / "storyboard.json", {"poses": {"wall-sit": {"prompt": "wall sit"}}, "scenes": [
+            {"segment_id": "intro", "pose": "wall-sit"},
+            {"segment_id": "fingers", "pose": "wall-sit", "tag": "Grip · Fingers · At home"},
+            {"segment_id": "card", "title": {"text": "Your plan"}, "tag": False},
+            {"segment_id": "plan", "pose": "wall-sit", "tag": "Grip · Weekly plan"}]})
+        write_json(directory / "layout.json", {"poses": {}, "scenes": {}})
+        project = projects.Project("headings-test")
+        self.assertEqual([s["segment_id"] for s in project.tag_sections()], ["intro", "fingers", "plan"])
+        tags = project.tags()
+        self.assertEqual([tags[i]["from"] for i in ids], [None, "Grip · Forearms · At home", None, ""])
+        self.assertIsNone(tags["card"]["text"])
+        approve(project, "content")
+        done = {"status": "completed", "result": {"audio_url": "https://x/a.mp3"}}
+        with patch.object(providers, "genmax_submit", side_effect=lambda text, voice: "t"), patch.object(providers, "genmax_wait", return_value=done), \
+                patch.object(providers, "genmax_download", return_value=speech_mp3()):
+            audio.generate(project)
+        with patch.object(providers, "gemini_image", return_value=figure_png()):
+            poses.generate(project, jobs=1)
+        self.assertEqual(scenes.scene_config(project, project.segments[1])["tagFrom"], "Grip · Forearms · At home")
+        self.assertNotIn("tagFrom", scenes.scene_config(project, project.segments[0]))
+        mid, after = scenes.stills(project, "fingers", [0.2, 1.5])
+        with Image.open(mid) as a, Image.open(after) as b:
+            corner = (0, 0, 700, 120)
+            self.assertNotEqual(a.crop(corner).tobytes(), b.crop(corner).tobytes(), "the heading is mid-swap at 0.2 s")
+        self.assertTrue(scenes.stills(project, "plan", [0.2])[0].is_file())
+        for segment_id in ids:
+            project.state["audio"][segment_id]["seconds"] = 12.0
+        text = Path(notes.draft(project)["path"]).read_text(encoding="utf-8")
+        self.assertIn("0:00 - Forearms · At home\n0:12 - Fingers · At home\n0:36 - Weekly plan", text)
+        project.storyboard["scenes"][1]["tag"] = 7
+        with self.assertRaises(FitnessError):
+            project.validate_content()
 
     def test_new_templates_render(self):
         make_channel()

@@ -42,9 +42,17 @@ One scene per script segment, same order (`storyboard.scenes[i].segment_id == sc
 
 Any component accepts `beat` (index) or `at` (seconds); `title`, `bars`, `warning` and `text` items also accept `until`/`until_beat`.
 
-### Pinned title tag
+### Pinned heading tag
 
-`brief.tag` (up to 60 characters) is drawn on every scene in the top-left corner: a small red bar, then the line in uppercase. It is static, so it looks pinned across scene cuts. When it is set, the badge moves just below it (and in 9:16 the info band and bars move down too). A scene can opt out with `"tag": false`.
+The heading is drawn in the top-left corner: a small red bar, then the line in uppercase, up to 60 characters.
+
+- `brief.tag` opens the video.
+- A scene with `"tag": "<line>"` starts a new main idea. The line carries forward until another scene changes it.
+- Within one idea the heading is static, so it looks pinned across scene cuts.
+- At the scene where it changes, the old line slides up and fades over about 0.25 s, and the new one slides in from the right. After a scene with `"tag": false`, the bar and the new line fade in together.
+- When a heading is shown, the badge moves just below it. In 9:16 the info band and bars move down too.
+- `"tag": false` hides it on that scene only.
+- `project.tag_sections()` lists where each heading starts. The content review prints that list, and `notes` turns it into YouTube chapters when it gives at least three chapters, 10 s or more apart. Otherwise chapters come from segment-id groups.
 
 ### Illustration templates
 

@@ -109,6 +109,32 @@ class Project:
     def scene_for(self, segment_id: str) -> dict:
         return next(s for s in self.storyboard["scenes"] if s["segment_id"] == segment_id)
 
+    def tags(self) -> dict[str, dict]:
+        """Pinned heading per scene, like headings in a document.
+
+        `brief.tag` opens the video; a scene with `"tag": "<line>"` starts a new main idea and the line carries
+        forward until another scene changes it; `"tag": false` hides it on that scene only. `from` is set where
+        the heading changes at a cut: the previous scene's line (swap) or "" (slide in after a scene without one).
+        """
+        current, previous, last, result = self.brief.get("tag"), None, None, {}
+        for scene in self.storyboard["scenes"]:
+            value = scene.get("tag", True)
+            if isinstance(value, str):
+                current = value
+            text = current if value is not False else None
+            change = bool(text) and last is not None and text != last
+            result[scene["segment_id"]] = {"text": text, "from": (previous or "") if change else None}
+            previous, last = text, text or last
+        return result
+
+    def tag_sections(self) -> list[dict]:
+        """Where each heading starts: [{segment_id, tag}], in order."""
+        sections = []
+        for segment_id, tag in self.tags().items():
+            if tag["text"] and (not sections or sections[-1]["tag"] != tag["text"]):
+                sections.append({"segment_id": segment_id, "tag": tag["text"]})
+        return sections
+
     # -- validation ------------------------------------------------------
     def validate_content(self) -> None:
         brief = self.brief
@@ -167,6 +193,9 @@ class Project:
                     raise FitnessError(f"Scene {scene['segment_id']}: split {side} shows a number; add its claim_id")
             if scene.get("meter") and not isinstance(scene["meter"].get("value"), (int, float)):
                 raise FitnessError(f"Scene {scene['segment_id']}: meter needs a numeric value")
+            tag = scene.get("tag", True)
+            if not isinstance(tag, (bool, str)) or (isinstance(tag, str) and not 0 < len(tag.strip()) <= 60):
+                raise FitnessError(f"Scene {scene['segment_id']}: tag must be a heading line (up to 60 characters) or false")
             if scene.get("tendons") and not scene.get("pose"):
                 raise FitnessError(f"Scene {scene['segment_id']} highlights tendons without a pose")
             for name, required in (("badge", "title"), ("title", "text"), ("warning", "text"), ("bars", "items")):
