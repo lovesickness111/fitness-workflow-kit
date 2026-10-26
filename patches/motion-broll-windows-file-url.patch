@@ -1,0 +1,26 @@
+diff --git a/engine/render.js b/engine/render.js
+--- a/engine/render.js
++++ b/engine/render.js
+@@ -1,8 +1,8 @@
+ // NODE_PATH=motion/node_modules node render.js dist/clip.html out/clip.(mp4|mov) [fps, e.g. 30000/1001 | 25 | 60]
+ // 4 subframes per frame across a 180° shutter, blended with ffmpeg tmix. Alpha clips -> ProRes 4444 .mov
+-const {chromium}=require('playwright');const {spawn}=require('child_process');const path=require('path');
++const {chromium}=require('playwright');const {spawn}=require('child_process');const path=require('path');const {pathToFileURL}=require('url');
+ (async()=>{
+  const [html,out,fpsArg]=process.argv.slice(2); const FPS=!fpsArg?30000/1001:(fpsArg.includes('/')?fpsArg.split('/')[0]/fpsArg.split('/')[1]:+fpsArg);
+  const b=await chromium.launch();const p=await b.newPage({viewport:{width:1920,height:1080}});
+  const errs=[];p.on('pageerror',e=>errs.push(e.message));
+- await p.goto('file://'+path.resolve(html)+'?render');await p.evaluate(()=>document.fonts.ready);
++ await p.goto(pathToFileURL(path.resolve(html)).href+'?render');await p.evaluate(()=>document.fonts.ready);
+diff --git a/engine/beats.js b/engine/beats.js
+--- a/engine/beats.js
++++ b/engine/beats.js
+@@ -1,6 +1,6 @@
+ // NODE_PATH=motion/node_modules node beats.js dist/clip.html out/sheet.png t1 t2 ... -> contact sheet of stills at those times
+-const {chromium}=require('playwright');const path=require('path');const os=require('os');const {execFileSync}=require('child_process');const fs=require('fs');
++const {chromium}=require('playwright');const path=require('path');const {pathToFileURL}=require('url');const os=require('os');const {execFileSync}=require('child_process');const fs=require('fs');
+ (async()=>{const [html,out,...ts]=process.argv.slice(2);
+  if(!html||!out||!ts.length){console.error('usage: node beats.js clip.html sheet.png t1 [t2 ...]');process.exit(2);}
+  const b=await chromium.launch();const p=await b.newPage({viewport:{width:1920,height:1080}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
+- await p.goto('file://'+path.resolve(html)+'?render');await p.evaluate(()=>document.fonts.ready);
++ await p.goto(pathToFileURL(path.resolve(html)).href+'?render');await p.evaluate(()=>document.fonts.ready);

@@ -1,0 +1,12 @@
+{
+  "content": "Thay bằng nội dung đã được duyệt.",
+  "title": "Thay bằng tiêu đề YouTube",
+  "description": "Thay bằng mô tả video.",
+  "platforms": { "youtube": true, "tiktok": false, "facebook": false, "linkedin": false },
+  "youtubePrivacy": "private",
+  "youtubeMadeForKids": false,
+  "youtubeContainsSyntheticMedia": false,
+  "tiktokPrivacyLevel": "SELF_ONLY",
+  "tiktokVideoMadeWithAi": false,
+  "facebookContentType": "feed"
+}

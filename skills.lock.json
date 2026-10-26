@@ -1,0 +1,72 @@
+{
+  "kitFormat": 1,
+  "kitVersion": "0.3.0",
+  "repository": "https://github.com/lovesickness111/fitness-workflow-kit.git",
+  "components": {
+    "video-use": {
+      "version": "43cfc56-kit.2",
+      "upstream": "https://github.com/browser-use/video-use.git",
+      "upstreamCommit": "43cfc566833548093455c9d4a46bd69913b7e552",
+      "paths": [
+        ".agents/skills/video-use",
+        ".claude/skills/video-use",
+        "config/python-requirements.txt",
+        "patches/video-use-windows-subtitles.patch"
+      ],
+      "sha256": "df3cf1b5426f0831e4bf8da287df8a14c6b8861524f6d87987f391c02e69c17d"
+    },
+    "publisher": {
+      "version": "0.1.2",
+      "paths": [
+        ".agents/skills/social-publishing",
+        ".claude/skills/social-publishing",
+        "tools/publisher",
+        "config/accounts.example.json",
+        "config/publish.example.json"
+      ],
+      "sha256": "b4ad070cdac1be5773c72ce8d6931a85542ac39d790ed934ff1cfd64ce081b6e"
+    },
+    "workflow": {
+      "version": "0.3.0",
+      "paths": [
+        ".agents/skills/video-workflow",
+        ".claude/skills/video-workflow",
+        "config/.env.example"
+      ],
+      "sha256": "9db93c49b692d78487677a105e351b10352ad35fb74b3437cc53f425ffb4f91d"
+    },
+    "motion-broll": {
+      "version": "3d83d98-kit.5",
+      "upstream": "https://github.com/Barty-Bart/motion-graphics.git",
+      "upstreamCommit": "3d83d987d658601d8a1269eb691622bdcd427335",
+      "paths": [
+        ".agents/skills/motion-broll",
+        ".claude/skills/motion-broll",
+        "tools/vendor/motion-broll",
+        "tools/motion_broll.py",
+        "patches/motion-broll-windows-file-url.patch",
+        "patches/motion-broll-windows-pages.patch"
+      ],
+      "sha256": "f9c105415bc24a662a91e0eff87c2693ab89ad80d64b97d9dc75b5e2b39b52c6"
+    },
+    "fitness-explainer": {
+      "version": "0.10.0",
+      "paths": [
+        ".agents/skills/fitness-explainer",
+        ".claude/skills/fitness-explainer",
+        "tools/fitness",
+        "tools/fitness_video.py",
+        "config/fitness"
+      ],
+      "sha256": "2974ea2076825ce7cb838d739d469dd16add0385631af19d2619317cfc5a9f7c"
+    },
+    "codex-image": {
+      "version": "1.0.0",
+      "paths": [
+        ".agents/skills/codex-image",
+        ".claude/skills/codex-image"
+      ],
+      "sha256": "1c704e3bd9a483b10c20172d181ed89fa018702b4cd546b05b295673ddf0a02d"
+    }
+  }
+}

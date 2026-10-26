@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "profiles": {
+    "main": {
+      "apiKeyEnv": "ZERNIO_API_KEY",
+      "platforms": {}
+    }
+  }
+}

@@ -1,0 +1,16 @@
+local/
+projects/*
+!projects/.gitkeep
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.log
+docs/rendered/
+release/
+*.pending
+.claude/settings.local.json

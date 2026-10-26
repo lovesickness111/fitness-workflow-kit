@@ -1,0 +1,26 @@
+diff --git a/scripts/make_pages.py b/scripts/make_pages.py
+--- a/scripts/make_pages.py
++++ b/scripts/make_pages.py
+@@ -5,3 +5,3 @@
+-plan_p = pathlib.Path(sys.argv[1]); P = json.load(open(plan_p)); base = plan_p.parent
++plan_p = pathlib.Path(sys.argv[1]); P = json.loads(plan_p.read_text(encoding='utf-8')); base = plan_p.parent
+ preview = pathlib.Path(sys.argv[2]).resolve(); out = preview.parent
+-rel = lambda f: os.path.relpath((base / f).resolve(), out)
++rel = lambda f: os.path.relpath((base / f).resolve(), out).replace(os.sep, '/')
+@@ -20 +20 @@
+-    return os.path.relpath(f, out)
++    return os.path.relpath(f, out).replace(os.sep, '/')
+@@ -24,2 +24,2 @@
+-v = open(S / 'viewer.html').read().replace('/*CLIPS*/[]', js(clips)).replace('/*TITLE*/', title_h).replace('/*SUB*/', f"{len(P['clips'])} clips + full preview")
+-open(out / 'viewer.html', 'w').write(v)
++v = (S / 'viewer.html').read_text(encoding='utf-8').replace('/*CLIPS*/[]', js(clips)).replace('/*TITLE*/', title_h).replace('/*SUB*/', f"{len(P['clips'])} clips + full preview")
++(out / 'viewer.html').write_text(v, encoding='utf-8')
+@@ -28 +28 @@
+-c = (open(S / 'compare.html').read().replace('/*DUR*/0', f'{dur:.2f}').replace('/*MARKS*/[]', js(marks))
++c = ((S / 'compare.html').read_text(encoding='utf-8').replace('/*DUR*/0', f'{dur:.2f}').replace('/*MARKS*/[]', js(marks))
+@@ -31 +31 @@
+-open(out / 'compare.html', 'w').write(c); print('wrote', out / 'viewer.html', 'and', out / 'compare.html')
++(out / 'compare.html').write_text(c, encoding='utf-8'); print('wrote', out / 'viewer.html', 'and', out / 'compare.html')
+@@ -37 +37 @@
+-open(out / 'TIMING.md', 'w').write(f"# Motion graphics for {title}\n\nEach file name ends with its timeline in-point (`0m32s40` = 0:32.40). Transparent panels are ProRes 4444 .mov files: put them on a track above the video.\n\n" + '\n'.join(rows) + ('\n\nNotes\n' + '\n'.join('- ' + n for n in notes) if notes else '') + '\n')
++(out / 'TIMING.md').write_text(f"# Motion graphics for {title}\n\nEach file name ends with its timeline in-point (`0m32s40` = 0:32.40). Transparent panels are ProRes 4444 .mov files: put them on a track above the video.\n\n" + '\n'.join(rows) + ('\n\nNotes\n' + '\n'.join('- ' + n for n in notes) if notes else '') + '\n', encoding='utf-8')

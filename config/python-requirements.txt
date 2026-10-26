@@ -1,0 +1,6 @@
+# Core requirements pinned to the environment used to prepare this kit.
+requests==2.34.2
+librosa==0.11.0
+matplotlib==3.11.2
+pillow==12.3.0
+numpy==2.4.6

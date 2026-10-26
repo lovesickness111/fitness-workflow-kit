@@ -1,0 +1,66 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;overflow:hidden}
+#stage{position:relative;overflow:hidden;font-family:'Montserrat',Arial,sans-serif;color:var(--ink);background:var(--background)}
+.abs{position:absolute}
+.pose-box{position:absolute;overflow:visible}
+.pose-cam{position:absolute;inset:0;will-change:transform}
+.pose-cam img{position:absolute;display:block;
+  /* fade a few percent at every image edge so walls or props touching the border melt into the black canvas */
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 6%,#000 94%,transparent),linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+.pose-cam svg{position:absolute;overflow:visible;mix-blend-mode:screen}
+.badge{display:flex;align-items:center;gap:.55em;font-weight:900;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.badge .kicker{color:var(--background);background:var(--accent);padding:.32em .62em;border-radius:.35em}
+.badge .dot{width:.42em;height:.42em;border-radius:50%;background:var(--signature)}
+.badge .title{color:var(--ink);text-shadow:0 0 .6em rgba(0,0,0,.9)}
+.timer{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.timer svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.timer .num{position:relative;font-weight:900;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.timer .lab{position:relative;font-weight:800;color:var(--accent);letter-spacing:.14em;text-transform:uppercase}
+.bars{display:flex;flex-direction:column;background:rgba(10,10,10,.82);border:2px solid rgba(255,255,255,.08);border-radius:.6em}
+.bars .head{font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--ink)}
+.bars .row{display:grid;grid-template-columns:1fr auto;align-items:end;row-gap:.28em}
+.bars .lab{font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.03em}
+.bars .val{font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+.bars .track{grid-column:1/3;height:.62em;background:#1f1f1f;border-radius:.31em;overflow:hidden}
+.bars .fill{height:100%;width:0;background:var(--accent);border-radius:.31em}
+.bars .src{color:var(--muted);font-weight:600;letter-spacing:.02em}
+.warning{display:flex;align-items:center;gap:.7em;background:rgba(18,15,0,.9);border:3px solid var(--warning);border-radius:.5em;color:var(--ink);font-weight:800}
+.warning svg{flex:none}
+.kinetic{display:flex;align-items:center;justify-content:center;text-align:center}
+.kinetic .phrase{position:absolute;left:0;right:0;font-weight:900;text-transform:uppercase;line-height:1.04;letter-spacing:.01em;text-shadow:0 .06em .5em rgba(0,0,0,.95)}
+.kinetic .w{display:inline-block;white-space:pre}
+.title{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.title .main{font-weight:900;text-transform:uppercase;line-height:1}
+.title .sub{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.18em}
+.tag{display:flex;align-items:center;gap:.6em;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:rgba(255,255,255,.88);white-space:nowrap;text-shadow:0 0 .4em rgba(0,0,0,.9)}
+.tag .bar{width:.22em;height:1.15em;border-radius:.1em;background:var(--highlight)}
+.callout{position:absolute;transform:translate(-50%,-50%);font-weight:900;text-transform:uppercase;line-height:1.05;white-space:nowrap;text-shadow:0 .06em .45em rgba(0,0,0,.95)}
+.mark{position:absolute;filter:drop-shadow(0 0 .4em rgba(0,0,0,.9))}
+.full-head{text-align:center;margin-bottom:.4em}
+.full-head .main{font-weight:900;text-transform:uppercase;line-height:1.05}
+.full-head .sub{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:.3em}
+.split,.plan,.table{display:flex;flex-direction:column;align-items:center}
+.split .panels{display:flex;gap:2.5%;width:100%;justify-content:center;align-items:stretch;flex:1}
+.split .panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:.35em;border:3px solid;border-radius:.6em;background:rgba(12,12,12,.85);padding:1.2% 1.5%}
+.split .kicker{font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.split .ptitle{font-weight:900;text-transform:uppercase;text-align:center;line-height:1.05}
+.split .media,.plan .media,.inset .frame{position:relative;overflow:hidden}
+.split .value{font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.split .caption{color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-align:center}
+.plan .cards{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;width:100%}
+.plan .card{display:flex;flex-direction:column;align-items:center;gap:.4em;border:2px solid rgba(255,255,255,.2);border-radius:.5em;padding:8px;background:rgba(12,12,12,.85)}
+.plan .label{font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--signature)}
+.table .rows{display:flex;flex-direction:column;gap:.9em;width:76%;margin-top:.6em}
+.table .row{display:grid;grid-template-columns:34% 1fr;align-items:center;border:2px solid;border-radius:.45em;background:rgba(12,12,12,.85);padding:.8em 1.2em;gap:1.2em}
+.table .left{font-weight:900;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.table .right{font-weight:700;color:var(--ink)}
+.inset{display:flex;flex-direction:column;gap:.4em}
+.inset .frame{border:2px solid rgba(255,255,255,.22);border-radius:.5em;background:#000}
+.inset .label{font-weight:900;text-transform:uppercase;text-align:center;line-height:1.1;color:var(--ink)}
+.meter{display:flex;flex-direction:column;gap:.45em;background:rgba(10,10,10,.85);border:2px solid rgba(255,255,255,.08);border-radius:.6em}
+.meter .head{font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.meter .num{font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.meter .segs{display:flex;align-items:flex-end;gap:.25em}
+.meter .seg{flex:1;border-radius:.15em}
+.meter .caption{color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
