@@ -7,6 +7,7 @@
   - Mỗi skill có file trỏ trong `.claude/skills/`, để Claude Code tìm thấy; bản chính vẫn nằm ở `.agents/skills/`.
   - Viết lại `START-HERE.md` và `README.md` theo luồng: tải ZIP, bấm đúp 4 file, mở thư mục trong Claude Desktop.
 - Sửa lỗi trên máy sạch: phần render fitness giờ cài bên trong `setup.ps1`, sau khi đã nạp lại PATH. Trước đây `1-Cai-dat.cmd` chạy bước này với PATH cũ nên báo thiếu Node/FFmpeg ngay sau khi winget vừa cài. Launcher dừng và báo rõ khi cài lỗi.
+- Sửa lỗi khóa thành phần trên máy khách. Digest trong `skills.lock.json` trước đây tính cả kiểu xuống dòng, nên bản ZIP/clone (LF) lệch với bản soạn trên Windows (CRLF). Hệ quả: `3-Kiem-tra.cmd` báo ACTION ở mọi thành phần và lệnh cập nhật từ chối chạy. Giờ digest bỏ qua CRLF/LF với file văn bản, và `manage.py package` kiểm tra lại digest ngay trong ZIP trước khi xuất.
 - `.gitattributes` giữ CRLF cho file `.cmd` và không đưa `docs/plans/` (ghi chú nội bộ) vào ZIP. `.gitignore` bỏ qua `*.pending` và `.claude/settings.local.json`. `config/.env.example` có thêm `GENMAX_API_KEY` và `GEMINI_API_KEY`.
 - Thêm workflow `fitness-explainer`: tạo trọn video giải thích fitness tiếng Anh theo phong cách manga nền đen.
   - Giọng đọc Genmax, ưu tiên hơn Gemini TTS. Tư thế nhân vật sinh bằng Gemini từ ảnh tham chiếu đã duyệt.

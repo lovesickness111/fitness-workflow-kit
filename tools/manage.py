@@ -44,7 +44,9 @@ def digest(base, paths):
             raise ValueError('Symlinks are not supported in component snapshots')
         result.update(p.relative_to(base).as_posix().encode())
         result.update(b'\0')
-        result.update(p.read_bytes())
+        data = p.read_bytes()
+        # Line endings depend on how the kit was obtained (Git checkout, ZIP, Windows editor); text hashes ignore them.
+        result.update(data if b'\0' in data else data.replace(b'\r\n', b'\n'))
         result.update(b'\0')
     return result.hexdigest()
 
@@ -200,6 +202,14 @@ def package(output):
             if set(parts)&(forbidden-{'projects'}) or (parts and parts[0]=='projects' and parts[-1]!='.gitkeep' and not name.endswith('/')):
                 output.unlink()
                 raise ValueError('Release archive contains runtime files')
+        with tempfile.TemporaryDirectory(prefix='video-workflow-package-') as temp:
+            archive.extractall(temp)
+            kit = Path(temp)/'video-workflow-kit'
+            lock = read_json(kit/'skills.lock.json')
+            stale = [n for n,c in lock['components'].items() if digest(kit,c['paths'])!=c['sha256']]
+    if stale:
+        output.unlink()
+        raise ValueError('Release archive does not match skills.lock.json for: '+', '.join(stale)+'. Relock and commit first.')
     print(f'ZIP: {output}')
     print('SHA256: '+hashlib.sha256(output.read_bytes()).hexdigest())
 

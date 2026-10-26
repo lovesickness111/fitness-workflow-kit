@@ -13,7 +13,7 @@
         "config/python-requirements.txt",
         "patches/video-use-windows-subtitles.patch"
       ],
-      "sha256": "df3cf1b5426f0831e4bf8da287df8a14c6b8861524f6d87987f391c02e69c17d"
+      "sha256": "b1a2c68b8fe0e37a945ec97bbd0b64039e5400c106886d52c42f502903c04a18"
     },
     "publisher": {
       "version": "0.1.2",
@@ -24,7 +24,7 @@
         "config/accounts.example.json",
         "config/publish.example.json"
       ],
-      "sha256": "b4ad070cdac1be5773c72ce8d6931a85542ac39d790ed934ff1cfd64ce081b6e"
+      "sha256": "f8a846d72d72ce6a42dda4a1b017c12ec046ff39df35a3bafc86a3d2d6097488"
     },
     "workflow": {
       "version": "0.3.0",
@@ -33,7 +33,7 @@
         ".claude/skills/video-workflow",
         "config/.env.example"
       ],
-      "sha256": "9db93c49b692d78487677a105e351b10352ad35fb74b3437cc53f425ffb4f91d"
+      "sha256": "961c5f7d5da75f2c5c70f4bedef5f42436ca957b2b59b1d1ada6f8fab91aef34"
     },
     "motion-broll": {
       "version": "3d83d98-kit.5",
@@ -47,7 +47,7 @@
         "patches/motion-broll-windows-file-url.patch",
         "patches/motion-broll-windows-pages.patch"
       ],
-      "sha256": "f9c105415bc24a662a91e0eff87c2693ab89ad80d64b97d9dc75b5e2b39b52c6"
+      "sha256": "75deb0d5d1de0fffcafd5c7703350628094c273f51f46cdd4132356cd9e5d3fe"
     },
     "fitness-explainer": {
       "version": "0.10.0",
@@ -58,7 +58,7 @@
         "tools/fitness_video.py",
         "config/fitness"
       ],
-      "sha256": "2974ea2076825ce7cb838d739d469dd16add0385631af19d2619317cfc5a9f7c"
+      "sha256": "791a28eafa64a9f992b5f9599e597d53df89fad1b8145b5d8fb34c5d36f1b507"
     },
     "codex-image": {
       "version": "1.0.0",
@@ -66,7 +66,7 @@
         ".agents/skills/codex-image",
         ".claude/skills/codex-image"
       ],
-      "sha256": "1c704e3bd9a483b10c20172d181ed89fa018702b4cd546b05b295673ddf0a02d"
+      "sha256": "fd15a46e49c34eb9ddfd93a03ec972fa1a25282c1fc65f615c81425b67cdca6c"
     }
   }
 }
