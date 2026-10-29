@@ -12,10 +12,14 @@ Bộ làm việc cho Windows, dùng với **Claude Desktop** (hoặc Codex):
 - **Claude Desktop** (tải ở claude.ai/download), đăng nhập bằng tài khoản Claude có dùng được Claude Code.
 - Key dịch vụ theo nhu cầu (lấy trên trang của từng dịch vụ):
   - **Genmax**: giọng đọc tiếng Anh.
-  - **Gemini**: vẽ ảnh dự phòng.
+  - **Gemini**: nhạc nền tạo riêng cho từng video (Lyria) và vẽ ảnh dự phòng.
   - **Zernio**: đăng bài.
   - **ElevenLabs**: chuyển lời nói thành chữ cho video tự quay.
-- Tùy chọn: tài khoản **ChatGPT**, dùng để vẽ ảnh nhân vật qua Codex. Không có thì kit vẽ bằng Gemini.
+- Vẽ ảnh nhân vật, chọn một trong ba cách:
+  - Mặc định: tài khoản **ChatGPT**, vẽ qua Codex.
+  - Tùy chọn: key **API That** (apithat.dev). Muốn dùng thì nhắn Claude "vẽ ảnh bằng API That" **trước khi** tạo hồ sơ kênh. Ảnh nhân vật tham chiếu và mô tả ảnh sẽ được gửi qua dịch vụ trung gian này.
+  - Không có hai cách trên thì kit vẽ bằng Gemini.
+- Tùy chọn: một bộ âm thanh hiệu ứng (SFX) miễn phí mà bạn được phép dùng, ví dụ bộ miễn phí của Mister Horse. Claude sẽ dựng âm thanh hiệu ứng cho video từ bộ này.
 
 Ảnh minh họa cách đăng ký ElevenLabs, Zernio và tạo key có trong `docs/Huong-dan-su-dung.docx`. Phần mở thư mục trong tài liệu đó viết cho Codex; với Claude Desktop, làm theo bước 7 bên dưới.
 
@@ -46,10 +50,12 @@ Key chỉ được lưu trên máy này (`local/secrets.env`), không đi vào G
 
    - Gửi ảnh nhân vật của bạn (chính diện, nghiêng, cận mặt), hoặc để Claude vẽ vài phương án cho bạn chọn.
    - Nghe vài giọng mẫu rồi chọn giọng. Việc này tốn một ít credit, Claude sẽ hỏi trước.
+   - Chọn nhạc nền: để Claude tạo nhạc mới cho từng video bằng Lyria (dùng key Gemini), hoặc đưa file nhạc bạn có quyền dùng.
+   - Nếu có bộ SFX, gửi Claude đường dẫn thư mục chứa bộ đó.
 2. **Mỗi video:** nói chủ đề, độ dài, và khung **9:16** hoặc **16:9**. Có thể gửi kèm một link YouTube để tham khảo cấu trúc và cách minh họa. Claude chỉ học cách làm, viết lời mới, dùng nhân vật của kênh bạn và kiểm chứng lại số liệu.
 3. Mỗi video dừng ở **ba lần duyệt**, bạn chỉ cần trả lời "duyệt" hoặc nói cần sửa gì:
    - **Nội dung:** kịch bản đầy đủ, hướng minh họa, nguồn cho mọi số liệu.
-   - **Media:** nghe `review/narration.mp3`, xem bảng ảnh và storyboard.
+   - **Media:** nghe `review/narration.mp3` (và nhạc nền `audio/bgm.wav` nếu có), xem bảng ảnh và storyboard.
    - **Bản dựng:** xem `render/preview.mp4`.
 
    Sau đó Claude mới xuất `render/final.mp4`, kèm nháp mô tả khi đăng `render/description.md`.
@@ -93,9 +99,15 @@ Có thể dùng `-Source C:\duong-dan\bo-kit-moi` để cập nhật từ thư m
 - Python 3.11+, Node.js 22+, Git và FFmpeg (có bộ lọc `subtitles`); `1-Cai-dat.cmd` cài những thứ còn thiếu. Lần đầu chạy, phần render tải thêm Chromium vào `local/`.
 - Chi phí tham khảo cho một video fitness khoảng 6–8 phút:
   - Genmax: khoảng 6.000 credit (1 credit cho mỗi ký tự lời đọc).
-  - Ảnh: khoảng 15–20 ảnh (Codex khoảng 1–4 credit ChatGPT mỗi ảnh, hoặc Gemini khoảng $0,07 mỗi ảnh; chế độ chạy theo lô rẻ bằng nửa).
+  - Ảnh: khoảng 15–20 ảnh.
+    - Codex: khoảng 1–4 credit ChatGPT mỗi ảnh.
+    - Gemini: khoảng $0,07 mỗi ảnh; chế độ chạy theo lô rẻ bằng nửa.
+    - API That: theo bảng giá của API That.
+  - Nhạc Lyria: tính vào key Gemini, theo bảng giá của Google.
   - Render chạy trên máy, không tốn tiền.
 - `local/`, `projects/` và `.venv/` không đi vào Git hoặc ZIP. Key trong `local/secrets.env` là văn bản thường trên ổ đĩa: giữ thư mục riêng tư và bảo vệ tài khoản Windows.
-- Kit không kèm nhạc có bản quyền hay video của người khác. Dùng nhạc bạn có quyền sử dụng và ghi nguồn trong hồ sơ kênh.
+- Kit không kèm file nhạc, SFX hay video nào.
+  - Nhạc Lyria được tạo mới bằng key của bạn và có dấu SynthID của Google; xem điều khoản Gemini API trước khi kiếm tiền từ video.
+  - Nhạc hoặc SFX bạn tự đưa vào phải là loại bạn có quyền dùng, và được ghi nguồn trong hồ sơ kênh.
 
 Mã bộ kit do nhóm quản lý nội bộ. `video-use` và `motion-broll` giữ giấy phép riêng; xem `THIRD-PARTY-NOTICES.md`.

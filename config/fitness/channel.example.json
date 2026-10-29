@@ -49,7 +49,7 @@
     }
   },
   "image": {
-    "provider": "gateway",
+    "provider": "codex",
     "fallback": "gemini",
     "batch": false,
     "gateway_base": "https://api.apithat.dev/v1",

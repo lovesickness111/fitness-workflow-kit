@@ -13,12 +13,15 @@ References: [style guide](references/style-guide.md) (palette, pose prompts, lay
 
 - Keys come from the environment, `local/secrets.env` or a kit-root `.env`. Ask the user to run `setup/configure.ps1` themselves; never put a key in a command, file you write, log or reply. If a user pastes a key into chat, do not reuse it; recommend rotating it.
 - Narration uses `GENMAX_API_KEY` when present (preferred), otherwise `GEMINI_API_KEY` with a prebuilt Gemini voice (`voice.provider: auto`).
-- Images follow `channel.image`. The kit default is `provider: gateway`: API That (`gateway_base: https://api.apithat.dev/v1`, `gateway_model: gpt-image-2.5-sunburst`, key `IMAGE_GATEWAY_API_KEY`), with `fallback: gemini`.
+- Images follow `channel.image`. The whole block is part of the channel approval and of every pose fingerprint, so settle the provider while setting up the channel. Switching later redraws every pose and needs a new channel approval: warn about the cost first.
+- Default `provider: codex`: draws through the local codex-image skill (`.claude/skills/codex-image`, Codex CLI logged in with ChatGPT; about 1–4 Codex credits per image), with `fallback: gemini` (`GEMINI_API_KEY`) when Codex is missing, logged out, refuses or fails.
+- Option `provider: gateway`: API That, an OpenAI-compatible third-party gateway (`gateway_base: https://api.apithat.dev/v1`, `gateway_model: gpt-image-2.5-sunburst`, key `IMAGE_GATEWAY_API_KEY` entered with `2-Nhap-key.cmd`), keeping `fallback: gemini`.
+  - Switch to it only when the user has an API That key and asks for it. Tell them first that their character references and prompts are sent to that service.
   - Poses with references go to `/images/edits`, illustrations to `/images/generations`. A call takes 1–5 min (client timeout 600 s). A read timeout or HTTP 524 raises an uncertain outcome: it may be billed, so never retry or fall back blindly; tell the user and check their API That usage first.
-  - `apithat.dev` is rewritten to `api.apithat.dev` (no Cloudflare 524 cut). Changing `gateway_model` changes every pose fingerprint, so already drawn poses are redrawn on the next `poses`/`produce`: warn about the cost first.
-- `provider: codex` draws through the local codex-image skill (`.claude/skills/codex-image`, Codex CLI logged in with ChatGPT; about 1–4 Codex credits per image), with `fallback: gemini` (`GEMINI_API_KEY`) when Codex is missing, logged out, refuses or fails.
+  - `apithat.dev` is rewritten to `api.apithat.dev` (no Cloudflare 524 cut). Changing `gateway_model` also changes every pose fingerprint.
+- For every provider:
   - Each pose record states `made_by` and any `fallback_reason`; report them at the media gate.
-  - Codex renders 1:1, 3:2 or 2:3 only; other aspects are centre-cropped from the nearest size.
+  - Codex and API That render 1:1, 3:2 or 2:3 only; other aspects are cropped from the nearest size, keeping the drawn subject.
   - The codex-image skill is part of the kit; customers without Codex use `provider: gemini`.
   - With Gemini as the provider, `image.batch: true` sends the first pass of all poses as one Gemini Batch job at half price.
     - It is slower: minutes to hours, with a 24 h ceiling. `poses`/`produce` wait up to `--wait-seconds`, then say to rerun later; rerunning polls the saved job and never submits a new one.

@@ -475,6 +475,11 @@ class ReferenceTests(unittest.TestCase):
         self.assertIn("Study 2020: Isometrics load tendons", text)
         self.assertIn("keep breathing", text)
 
+    def test_new_channels_draw_with_codex_and_keep_gateway_opt_in(self):
+        image = read_json(channel_profile.EXAMPLE)["image"]
+        self.assertEqual((image["provider"], image["fallback"]), ("codex", "gemini"))
+        self.assertTrue(image["gateway_base"].startswith("https://"), "API That stays one setting away")
+
 
 @unittest.skipUnless(HAS_RENDER, "render runtime not installed (fitness_video.py setup)")
 class EndToEndTests(unittest.TestCase):

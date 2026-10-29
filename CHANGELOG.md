@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.4 (prerelease)
+
+Bản phát hành gộp 0.3.2 và 0.3.3, kèm các chỉnh sửa sau (thành phần `fitness-explainer` 0.12.2):
+
+- Mặc định vẽ ảnh của kênh mới trở lại **Codex**, dự phòng bằng Gemini. API That (`provider: gateway`) là tùy chọn: Claude chỉ chuyển sang khi người dùng có key `IMAGE_GATEWAY_API_KEY` và yêu cầu. Trước khi chuyển, Claude báo rằng ảnh tham chiếu và prompt sẽ được gửi qua dịch vụ trung gian đó. Kênh đã tạo trước đây giữ nguyên lựa chọn cũ.
+- Skill ghi rõ: khối `channel.image` thuộc lần duyệt kênh và dấu vân tay ảnh, nên đổi bên vẽ sau khi đã có ảnh sẽ phải vẽ lại toàn bộ (báo chi phí trước).
+- Hướng dẫn: `START-HERE.md`, `README.md` và `AGENTS.md` thêm các phần sau, kèm chi phí và lưu ý dữ liệu.
+  - API That tùy chọn.
+  - Nhạc nền Lyria tạo riêng cho từng video bằng key Gemini.
+  - Bộ SFX do người dùng tự tải.
+- `2-Nhap-key.cmd` ghi Gemini dùng cho nhạc Lyria, ghi API That là tùy chọn. `config/.env.example` thêm `IMAGE_GATEWAY_API_KEY`.
+
 ## 0.3.3 (prerelease)
 
 Fitness (thành phần `fitness-explainer` 0.12.1): vẽ ảnh qua API That.

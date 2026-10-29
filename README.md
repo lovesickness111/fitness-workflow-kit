@@ -27,7 +27,8 @@ Bộ làm việc Windows dùng với **Claude Desktop** (hoặc Codex):
   - `codex-image`: vẽ ảnh qua Codex, tính vào gói ChatGPT.
 - `fitness-explainer` tạo video manga nền đen có HUD động, theo khung 9:16 hoặc 16:9:
   - giọng đọc Genmax, có 4 giọng sẵn;
-  - ảnh nhân vật vẽ bằng Codex, dự phòng bằng Gemini (có chế độ chạy theo lô rẻ bằng nửa);
+  - ảnh nhân vật vẽ bằng Codex (hoặc API That nếu chọn), dự phòng bằng Gemini (có chế độ chạy theo lô rẻ bằng nửa);
+  - chuyển cảnh, chữ phát sáng, nhạc nền Lyria tạo riêng cho từng video, SFX từ bộ âm thanh của chính người dùng;
   - tham khảo nội dung và minh họa từ một video YouTube;
   - mọi số liệu có nguồn;
   - ba lần duyệt: nội dung, media, bản dựng.
@@ -38,4 +39,4 @@ Bộ làm việc Windows dùng với **Claude Desktop** (hoặc Codex):
 
 Bộ kit không chứa API key, tài khoản, hồ sơ kênh, nhân vật, video hay nhạc của tác giả. Mỗi người dùng tự nhập key và kết nối tài khoản của mình.
 
-Phiên bản 0.3.1 vẫn là **prerelease**: chưa chạy end-to-end trên một máy sạch. Xem [CHANGELOG](CHANGELOG.md).
+Phiên bản 0.3.4 vẫn là **prerelease**: chưa chạy end-to-end trên một máy sạch. Xem [CHANGELOG](CHANGELOG.md).
