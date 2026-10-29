@@ -67,3 +67,25 @@ html,body{background:#000;overflow:hidden}
 .meter .segs{display:flex;align-items:flex-end;gap:.25em}
 .meter .seg{flex:1;border-radius:.15em}
 .meter .caption{color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.holdbar{display:flex;flex-direction:column;align-items:center;gap:.45em;background:rgba(10,10,10,.85);border:2px solid rgba(255,255,255,.08);border-radius:.6em;text-align:center}
+.holdbar .head{font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.holdbar .num{font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.holdbar .segs{display:flex;gap:.3em;width:100%}
+.holdbar .seg{flex:1;height:.9em;border-radius:.18em;border:2px solid #3a3a3a}
+.holdbar .fail{font-weight:900;text-transform:uppercase;color:var(--ink)}
+.angle{display:flex;flex-direction:column;align-items:center;text-align:center}
+.angle .deg{font-weight:900;font-variant-numeric:tabular-nums;margin-top:-.4em}
+.angle .lab{font-weight:900;text-transform:uppercase;line-height:1.1;color:var(--ink)}
+.switch{display:flex;flex-direction:column;align-items:center;gap:.7em;text-align:center}
+.switch .row{display:flex;align-items:center;gap:.7em;font-weight:900}
+.switch .track{position:relative;display:inline-block;width:4.6em;height:1.6em;border-radius:.8em;background:#1c1c1c;border:3px solid #444}
+.switch .knob{position:absolute;top:.15em;width:1.15em;height:1.15em;border-radius:50%}
+.switch .line{font-weight:800;line-height:1.15;color:var(--ink)}
+.dose{display:flex;align-items:center;gap:.7em;background:rgba(10,10,10,.9);border:3px solid var(--signature);border-radius:3em;padding:.35em 1.1em .35em .4em;white-space:nowrap}
+.dose .main{font-weight:900;line-height:1;color:var(--ink)}
+.dose .dots{display:flex;align-items:center;gap:.3em;margin-top:.35em}
+.dose .dot{width:.55em;height:.55em;border-radius:50%}
+.dose .note{font-weight:800;font-size:.55em;color:var(--muted);margin-left:.4em}
+/* impact frame: black speed lines radiating from the centre over the inverted (white) stage */
+.speedlines{background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(0,0,0,.85) 0deg 1.1deg,transparent 1.1deg 5.5deg);
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 22%,#000 60%);mask-image:radial-gradient(circle at 50% 50%,transparent 22%,#000 60%)}

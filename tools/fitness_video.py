@@ -1,9 +1,9 @@
 """Fitness explainer workflow CLI.
 
   setup | doctor
-  channel init | voices | sample | character | select | add-reference | review | approve
+  channel init | voices | sample | character | select | add-reference | sfx-pack | review | approve
   init | status | reference | skeleton | research | originality | review | approve | notes
-  produce (= audio + poses + sheets + storyboard) | build (= visuals + preview + check) | render
+  produce (= audio + poses + sheets + storyboard) | music | build (= visuals + sfx + preview + check) | render
   audio | poses | sheet | stills | storyboard | visuals | preview | check
 
 Read .agents/skills/fitness-explainer/SKILL.md for the gated process.
@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fitness import assemble, audio, notes, poses, providers, qa, reference, research, scenes  # noqa: E402
+from fitness import assemble, audio, music, notes, poses, providers, qa, reference, research, scenes, sfx  # noqa: E402
 from fitness import channel as channel_profile  # noqa: E402
 from fitness import project as projects  # noqa: E402
 from fitness.common import CHANNEL_DIR, ROOT, RUNTIME, FitnessError, secret_present, which  # noqa: E402
@@ -50,6 +50,8 @@ def doctor(_args) -> None:
     for binary in ("node", "ffmpeg", "ffprobe"):
         rows.append(("OK" if which(binary) else "ACTION", binary, "found" if which(binary) else "missing: run setup/setup.ps1"))
     rows.append(("OK" if (RUNTIME / "node_modules/playwright").is_dir() else "ACTION", "render runtime", str(RUNTIME)))
+    if secret_present("IMAGE_GATEWAY_API_KEY"):
+        rows.append(("OK", "IMAGE_GATEWAY_API_KEY", "present locally (not remotely validated)"))
     try:
         providers.codex_script()
         codex = which("codex") or os.environ.get("CODEX_BIN")
@@ -131,6 +133,12 @@ def channel_cmd(args) -> None:
         print("\n".join(map(str, channel_profile.references(channel, args.character))))
     elif args.channel_action == "add-reference":
         print(channel_profile.add_reference(channel, args.character, Path(args.image), args.label))
+    elif args.channel_action == "sfx-pack":
+        mapping = dict(item.split("=", 1) for item in args.map or [])
+        built = sfx.build_pack(channel, Path(args.source), mapping)
+        print(f"{len(built)} cues -> {CHANNEL_DIR / ((channel.get('sfx') or {}).get('pack') or 'sfx')}: {', '.join(built)}")
+        if not channel.get("sfx"):
+            print('next: set "sfx": {"pack": "sfx", "gain_db": 0} in local/fitness/channel.json, then review and approve the channel')
     elif args.channel_action == "review":
         voice = channel_profile.voice_config(channel)
         print(f"Channel: {channel['name']}\nPalette: {channel['palette']}\nDefault character: {channel['default_character']}")
@@ -142,6 +150,10 @@ def channel_cmd(args) -> None:
         for preset_id, preset in channel_profile.voice_presets(channel).items():
             print(f"  preset {preset_id}: {preset['name']} ({preset['voice_id']})")
         print(f"Music: {channel.get('music')}")
+        if music.generated(channel):
+            print(f"  styles already used: {[v['prompt'] + ' @' + str(v.get('bpm')) for v in music.used_styles()] or 'none'}")
+        print(f"SFX: {channel.get('sfx') or 'none (no automatic sound effects)'}")
+        print(f"Motion: {channel.get('motion') or {'transition': 'blur', 'keyword_glow': True}}")
         print(f"sha256={channel_profile.record_review(channel)}")
     elif args.channel_action == "approve":
         channel_profile.approve(channel, args.expected_sha256, args.decision)
@@ -330,6 +342,16 @@ def produce_cmd(args) -> None:
         print(f"next: set layout.json tendon positions for {', '.join(missing)} using the grid sheet, then run `storyboard`")
     else:
         print(f"storyboard: {scenes.storyboard(project, jobs=args.jobs)}")
+    if music.generated(project.channel) and not project.state.get("music"):
+        print("next: set brief.music (a style no earlier video used) and run `music` before the media gate")
+
+
+def music_cmd(args) -> None:
+    """Generate this video's own background bed with Lyria (channel.music.provider = lyria)."""
+    project = projects.Project(args.project)
+    record = music.generate(project, allow_repeat=args.allow_repeat, force=args.force)
+    print(f"bed: {project.path(record['path'])} {record['seconds']}s | style: {record['spec'].get('prompt')} @ {record['spec'].get('bpm')} BPM")
+    print("listen to it before the media gate; you can hear it, the tool cannot")
 
 
 def storyboard_cmd(args) -> None:
@@ -440,6 +462,9 @@ def main() -> None:
     reference.add_argument("--character", required=True)
     reference.add_argument("--image", required=True)
     reference.add_argument("--label")
+    pack = actions.add_parser("sfx-pack", help="trim and level your own SFX pack into local/fitness/sfx")
+    pack.add_argument("--source", required=True, help="folder of the pack's .wav files (default picks: free Mister Horse pack)")
+    pack.add_argument("--map", action="append", help="cue=relative/file.wav to override a pick; repeatable")
     actions.add_parser("review")
     approve = actions.add_parser("approve")
     approve.add_argument("--expected-sha256", help="digest printed by `channel review` (default: the last review)")
@@ -489,6 +514,9 @@ def main() -> None:
     produce = with_project("produce", produce_cmd)
     produce.add_argument("--jobs", type=int, default=2)
     produce.add_argument("--wait-seconds", type=int, default=300)
+    music_parser = with_project("music", music_cmd)
+    music_parser.add_argument("--force", action="store_true", help="make a new bed even if one exists for this style")
+    music_parser.add_argument("--allow-repeat", action="store_true", help="allow a style another video already used")
     with_project("storyboard", storyboard_cmd).add_argument("--jobs", type=int, default=2)
     with_project("build", build_cmd).add_argument("--jobs", type=int, default=2)
     with_project("check", check_cmd).add_argument("--output", choices=("preview", "final"), default="preview")

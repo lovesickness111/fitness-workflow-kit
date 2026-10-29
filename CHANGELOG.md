@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.3.3 (prerelease)
+
+Fitness (thành phần `fitness-explainer` 0.12.1): vẽ ảnh qua API That.
+
+- Mặc định mới cho kênh: `channel.image.provider = "gateway"`, model `gpt-image-2.5-sunburst`, host `https://api.apithat.dev/v1`, key `IMAGE_GATEWAY_API_KEY` (nhập bằng `2-Nhap-key.cmd`), dự phòng Gemini.
+- Host `apithat.dev` được tự đổi sang `api.apithat.dev`. Theo tài liệu API That, host này không qua Cloudflare nên ảnh lâu không bị cắt 524. Đổi trong code nên dấu vân tay ảnh pose và lần duyệt kênh không đổi.
+- Timeout client 600 giây. Hết thời gian đọc hoặc HTTP 524 được coi là kết quả không chắc chắn: không tự thử lại, không chuyển sang Gemini, vì ảnh có thể đã bị tính phí. Thiếu key thì báo lỗi ngay, không gửi request.
+- `doctor` hiện dòng `IMAGE_GATEWAY_API_KEY` khi có key.
+- Kiểm thử: thêm `test_gateway_uses_image_host_and_never_falls_back_after_a_timeout` (giả lập HTTP, không gọi API thật). Chưa tạo ảnh thật bằng `gpt-image-2.5-sunburst`.
+
+## 0.3.2 (prerelease)
+
+Fitness (thành phần `fitness-explainer` 0.12.0): hiệu ứng, SFX và nhạc nền, rút ra từ việc phân tích 25 video kênh tham chiếu và từ các video đã làm.
+
+- Chuyển cảnh:
+  - Mặc định là **mờ nhòe 0,22 giây**: cảnh cũ nhòe đi ở 0,14 giây cuối, cảnh mới hiện ra từ nhòe. Thay cho kiểu mờ dần từ đen trước đây.
+  - Field mới `transition`: `blur | swipe | impact | cut | fade`, và `impact: true`.
+  - `swipe`: cảnh lướt lên từ dưới kèm nhòe chuyển động dọc.
+  - `impact`: 3 khung trắng âm bản có tia tốc độ manga, sau đó zoom nhòe vào cảnh.
+  - Cảnh trước chỉ nhòe ra khi cảnh sau vào bằng nhòe, nên cú cắt vào impact hay swipe vẫn sắc.
+  - Đặt mặc định cho cả kênh bằng `channel.motion.transition`, cho từng video bằng `brief.transition`.
+- Từ khóa (`accent`) **phát sáng neon** theo màu của nó. Lúc xuất hiện, lõi chữ bừng gần trắng khoảng 0,1 giây rồi lắng xuống và "thở". Tắt bằng `channel.motion.keyword_glow: false`.
+- Bốn component mới:
+  - `holdbar`: đồng hồ tự kiểm tra, 10 ô mỗi ô một giây, có trạng thái hỏng "Touch = stop".
+  - `angle`: chữ L neon có chân xoay tới góc.
+  - `switch`: công tắc dễ/khó.
+  - `dose`: chip đồng hồ bấm giờ "20–30s × 3" với chấm hiệp.
+- SFX tự động:
+  - `channel sfx-pack --source <thư mục>` dựng 11 âm (cắt, fade, cân âm lượng) từ bộ SFX của chính người dùng. Mặc định khớp bộ Mister Horse miễn phí; đổi từng âm bằng `--map`.
+  - `build` tạo `audio/sfx.wav` từ chính cấu hình cảnh: chuyển cảnh, tiêu đề, chữ, badge, đồng hồ, dấu ✕/✓, cảnh báo, panel và các component mới. Mỗi 0,12 giây chỉ giữ một âm, sự kiện lớn thắng. Danh sách âm ghi ở `audio/sfx.json`.
+  - `check` đo đỉnh SFX và nhắc khi SFX to hơn -6 dBFS.
+- Nhạc nền mới cho từng video:
+  - Cấu hình `channel.music = {"provider": "lyria", "gain_db": -18, "duck": false}`, phong cách đặt trong `brief.music`, chạy lệnh `music`.
+  - Nhạc được tạo đủ độ dài video (không lặp), fade, chuẩn -16 LUFS. Bản nào có đoạn im lặng (stream bị đứt) sẽ bị từ chối.
+  - `local/fitness/music_log.json` lưu các phong cách đã dùng; dùng lại phải thêm `--allow-repeat`.
+  - `duck: false` trộn nhạc không nén. Phần mô tả khi đăng ghi nguồn "made with Google Lyria".
+  - Thêm `google-genai==2.33.0` vào `config/fitness/requirements.txt`. Phần code phiên Lyria theo `lyria-recipe.py` của HyperFrames media-use (Apache 2.0).
+- Style guide:
+  - Nhịp dựng theo kênh tham chiếu: phút đầu 15–25 lần đổi, thân bài 3–7 giây mỗi tư thế.
+  - Quy tắc prompt: ghi rõ điểm tiếp xúc; phía trước chân đang giữ không có vật gì; prompt cận cảnh hay ra cả người lơ lửng.
+  - Danh sách kiểm tra ảnh: không lơ lửng, chân không gác lên đạo cụ, đạo cụ giữ màu xám, so từng ảnh với câu thoại của nó.
+- Sửa chỉ số input của SFX trong `assemble` khi nhạc không lặp. Hồ sơ kênh chỉ đưa `sfx`/`motion` vào digest khi được cấu hình, nên kênh đã duyệt trước đây không bị mất duyệt.
+- Kiểm thử: thêm `test_transitions_glow_and_hud_panels_render`, gồm render khung hình thật, dựng pack SFX giả, trộn SFX + nhạc và giả lập Lyria. 28/28 test đạt. Lyria thật và một video đầy đủ trên máy sạch chưa được chạy.
+
 ## 0.3.1 (prerelease)
 
 - Fitness: tag ở góc trên bên trái giờ đổi theo từng ý chính của video, giống heading trong văn bản.

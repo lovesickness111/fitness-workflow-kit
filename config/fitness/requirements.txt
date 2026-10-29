@@ -1,2 +1,3 @@
 # Extra Python packages for the fitness explainer, installed into the kit .venv by `fitness_video.py setup`.
 yt-dlp==2026.10.21
+google-genai==2.33.0

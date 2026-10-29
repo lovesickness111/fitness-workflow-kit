@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+import wave
 from pathlib import Path
 from unittest.mock import patch
 
@@ -229,6 +230,27 @@ class ImageProviderTests(unittest.TestCase):
                 patch.object(providers, "gemini_image", side_effect=FitnessError("quota")):
             with self.assertRaises(FitnessError):
                 providers.generate_image(config, "a pose", [], "1:1")
+
+    def test_gateway_uses_image_host_and_never_falls_back_after_a_timeout(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (1536, 1024), (0, 0, 0)).save(buffer, format="PNG")
+        ok = unittest.mock.Mock(status_code=200)
+        ok.json.return_value = {"data": [{"b64_json": base64.b64encode(buffer.getvalue()).decode()}]}
+        config = {"provider": "gateway", "fallback": "gemini", "gateway_base": "https://apithat.dev/v1"}
+        with patch.object(providers, "secret", return_value="sk-test"), \
+                patch.object(providers.requests, "post", return_value=ok) as post:
+            data, meta = providers.generate_image(config, "a pose", [], "16:9")
+        self.assertEqual(post.call_args.args[0], "https://api.apithat.dev/v1/images/generations")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], "gpt-image-2.5-sunburst")
+        self.assertEqual((meta["provider"], meta["native"]), ("gateway", [1536, 1024]))
+        for outcome in (providers.requests.ReadTimeout(), unittest.mock.Mock(status_code=524)):
+            with patch.object(providers, "secret", return_value="sk-test"), \
+                    patch.object(providers.requests, "post", side_effect=[outcome] if isinstance(outcome, Exception) else None,
+                                 return_value=outcome), \
+                    patch.object(providers, "gemini_image") as gemini:
+                with self.assertRaises(providers.UncertainOutcome):
+                    providers.generate_image(config, "a pose", [], "16:9")
+            gemini.assert_not_called()
 
 
 class GeminiBatchTests(unittest.TestCase):
@@ -569,6 +591,100 @@ class EndToEndTests(unittest.TestCase):
         self.assertTrue(board.is_file())
         with Image.open(board) as sheet:
             self.assertGreater(sheet.width, 1000)
+
+    def test_transitions_glow_and_hud_panels_render(self):
+        make_channel()
+        directory = projects.init("motion-test", "Motion", "16:9")
+        write_json(directory / "research/sources.json", {"sources": [{"id": "s1", "title": "Study", "short": "Study", "locator": "doi:10.1/x"}]})
+        write_json(directory / "research/claims.json", {"claims": []})
+        write_json(directory / "script.json", {"segments": [{"id": s, "text": "One short line. Then another."} for s in ("hook", "hold", "ease", "end")]})
+        write_json(directory / "storyboard.json", {
+            "poses": {"wall-sit": {"prompt": "wall sit"}},
+            "scenes": [
+                {"segment_id": "hook", "impact": True, "title": {"text": "The ten second test", "accent": [{"word": "test", "color": "highlight"}]}},
+                {"segment_id": "hold", "pose": "wall-sit", "holdbar": {"label": "Feet up, start the timer", "beat": 0, "run_at": 0.2, "speed": 4, "stop_at": 1.6},
+                 "dose": {"main": "20-30s x 3", "sets": 3, "beat": 0}},
+                {"segment_id": "ease", "transition": "swipe", "pose": "wall-sit", "switch": {"steps": [
+                    {"side": "easy", "text": "Toes lightly touching", "at": 0.1}, {"side": "hard", "text": "Knees further out", "accent": [{"word": "further", "color": "highlight"}], "at": 1.0}]}},
+                {"segment_id": "end", "pose": "wall-sit", "angle": {"label": "Legs level", "accent": [{"word": "level", "color": "highlight"}], "steps": [{"deg": 0, "at": 0.4}], "beat": 0},
+                 "text": [{"text": "Stay light", "accent": [{"word": "light", "color": "accent"}]}]},
+            ]})
+        write_json(directory / "layout.json", {"poses": {"wall-sit": {"tendons": {}}}, "scenes": {}})
+        project = projects.Project("motion-test")
+        approve(project, "content")
+        done = {"status": "completed", "result": {"audio_url": "https://x/a.mp3"}}
+        with patch.object(providers, "genmax_submit", side_effect=lambda text, voice: "t"), patch.object(providers, "genmax_wait", return_value=done), \
+                patch.object(providers, "genmax_download", return_value=speech_mp3()):
+            audio.generate(project)
+        with patch.object(providers, "gemini_image", return_value=figure_png()):
+            poses.generate(project, jobs=1)
+        # Exits mirror the next entry: blur only into a blur scene, sharp into impact/swipe.
+        seg = {s["id"]: s for s in project.segments}
+        self.assertEqual(scenes.transition(project, seg["hook"]), {"in": "impact", "out": "blur"})
+        self.assertEqual(scenes.transition(project, seg["hold"]), {"in": "blur", "out": "none"})
+        self.assertEqual(scenes.transition(project, seg["ease"]), {"in": "swipe", "out": "blur"})
+        config = scenes.scene_config(project, seg["hold"])
+        self.assertTrue(config["holdbar"]["stop_at"] == 1.6 and config["dose"]["sets"] == 3)
+        shots = scenes.stills(project, "hook", [0.03, 0.25, 1.0]) + scenes.stills(project, "hold", [0.05, 1.0, 2.0]) \
+            + scenes.stills(project, "ease", [0.1, 0.5, 1.6]) + scenes.stills(project, "end", [1.2])
+        self.assertTrue(all(p.is_file() for p in shots))
+        with Image.open(shots[0]) as flash, Image.open(shots[2]) as settled:
+            self.assertGreater(np.asarray(flash.convert("L")).mean(), np.asarray(settled.convert("L")).mean() + 60, "impact frame is inverted to white")
+        keep = os.environ.get("FITNESS_TEST_KEEP")
+        if keep:
+            Path(keep).mkdir(parents=True, exist_ok=True)
+            for p in shots:
+                shutil.copy(p, Path(keep) / p.name)
+        # Sound effects: a pack built from the creator's files, cues placed from the same scene configs.
+        from fitness import sfx as sfx_effects, music as music_beds
+        pack = TMP / "mh-pack"
+        for cue, (name, _) in sfx_effects.MISTER_HORSE.items():
+            target = pack / f"{name}.wav"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=880:duration=0.6", str(target)], check=True)
+        project.channel["sfx"] = {"pack": "sfx-test", "gain_db": 0}  # in memory only: the shared channel approval stays valid
+        self.assertEqual(len(sfx_effects.build_pack(project.channel, pack)), len(sfx_effects.MISTER_HORSE))
+        timeline = sfx_effects.events(project)
+        cues = {e["cue"] for e in timeline}
+        self.assertTrue({"impact-bass-2", "click", "error", "whoosh"} <= cues, cues)
+        self.assertTrue(all(b["t"] - a["t"] >= sfx_effects.DEDUPE for a, b in zip(timeline, timeline[1:])))
+        track = sfx_effects.build_track(project)
+        with wave.open(str(track)) as w:
+            samples = np.frombuffer(w.readframes(w.getnframes()), "<i2").reshape(-1, 2)
+        hit = timeline[0]
+        self.assertGreater(np.abs(samples[int(hit["t"] * 48000): int(hit["t"] * 48000) + 4800]).max(), 1000)
+        # Music: a new bed per video, refused when another video used the same style, checked for dropouts.
+        project.channel["music"] = {"provider": "lyria", "gain_db": -18, "duck": False}
+        project.brief["music"] = {"prompt": "dark ticking clock tension", "bpm": 108}
+
+        async def fake_stream(output, seconds, spec, gap=None):
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"sine=frequency=110:duration={seconds:.2f}",
+                            "-ac", "2", "-ar", "48000", str(output)], check=True)
+            return seconds
+        with patch.object(music_beds, "_stream", fake_stream):
+            record = music_beds.generate(project)
+            self.assertTrue(project.path(record["path"]).is_file())
+            self.assertEqual(music_beds.bed(project), (project.path("audio/bgm.wav"), False))
+            projects.init("motion-test-2", "Motion 2", "16:9")
+            twin = projects.Project("motion-test-2")
+            twin.channel["music"] = project.channel["music"]
+            twin.brief["music"] = dict(project.brief["music"])
+            for s in project.segments:
+                twin.state["audio"][s["id"]] = project.state["audio"][s["id"]]
+            with self.assertRaises(FitnessError):
+                music_beds.generate(twin)  # same style as motion-test
+        with tempfile.TemporaryDirectory() as work:
+            seconds = sum(project.state["audio"][s["id"]]["seconds"] for s in project.segments)
+            mix = assemble._mix(project, Path(work), seconds)
+            self.assertGreater(probe(mix)["duration"], seconds - 0.1)
+        silent = TMP / "gap.wav"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=110:duration=10", "-af",
+                        "volume=enable='between(t,4,6)':volume=0", str(silent)], check=True)
+        self.assertTrue(music_beds.dropouts(silent))
+        project.storyboard["scenes"][1]["timer"] = {"count": 10, "beat": 1}
+        write_json(project.dir / "storyboard.json", project.storyboard)
+        with self.assertRaises(FitnessError):
+            scenes.scene_config(projects.Project("motion-test"), seg["hold"])  # dose and timer share a corner
 
     def test_gated_render_produces_matching_delivery(self):
         project = make_project("e2e-test")

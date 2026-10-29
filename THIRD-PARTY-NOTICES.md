@@ -26,6 +26,14 @@ Source: https://github.com/google/fonts/tree/main/ofl/montserrat
 
 Copyright 2024 The Montserrat.Git Project Authors. SIL Open Font License 1.1, retained in `tools/fitness/templates/fonts/OFL.txt`. Embedded unmodified in rendered scene pages.
 
+## Lyria session code (fitness music)
+
+`tools/fitness/music.py` follows the Lyria RealTime session flow of `lyria-recipe.py` from the HyperFrames media-use skill (HeyGen), Apache License 2.0. Rewritten for the kit; no file is copied unmodified. Generated music is made by the creator with their own Gemini key under Google's terms and carries Google's SynthID watermark.
+
+## Sound effects
+
+No sound effect files are bundled. `channel sfx-pack` builds cues from a pack the creator downloads and may use themselves (for example the free Mister Horse pack); the pack's own license applies and the built cues stay in the ignored `local/fitness/sfx/`.
+
 ## Dependencies and services
 
 Python and npm dependencies retain their respective licenses, supplied by their packages at installation. FFmpeg, Git, Python, Node.js and Codex are installed separately and are not redistributed in the ZIP. ElevenLabs, Genmax, Google Gemini and Zernio are external services governed by their own terms, permissions, quotas and charges, including the commercial-use terms of generated voices and images. Playwright and Chromium for the fitness renderer are downloaded at setup into ignored folders, not bundled. No stock music, personal footage, browser profiles or authentication state is bundled.

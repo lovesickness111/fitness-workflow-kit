@@ -52,6 +52,12 @@ def check(project, name: str) -> dict:
         report["notes"].append("loudness is more than 1 LU away from -14 LUFS")
     if project.channel.get("music") and report["gap_mean_volume_db"] is not None and report["gap_mean_volume_db"] < -45:
         report["notes"].append("music bed is nearly inaudible between scenes; consider a higher channel.music.gain_db")
+    # Sound effects sit under the voice: a cue louder than the speech peak sounds like a mistake.
+    sfx_track = project.path("audio/sfx.wav")
+    if sfx_track.is_file():
+        report["sfx_peak_dbfs"] = _loudness(sfx_track)["true_peak_dbfs"]
+        if report["sfx_peak_dbfs"] is not None and report["sfx_peak_dbfs"] > -6:
+            report["notes"].append(f"sound effects peak at {report['sfx_peak_dbfs']} dBFS; lower channel.sfx.gain_db")
     if name == "preview" and report["bytes"] > 50 * 1024 * 1024:
         report["notes"].append("preview is larger than 50 MB; it may not send through chat")
     # Frame sheet at evenly spaced times.

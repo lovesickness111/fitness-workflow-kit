@@ -51,8 +51,17 @@ def validate(channel: dict) -> None:
         raise FitnessError("channel.voice.provider must be auto, genmax or gemini")
     music = channel.get("music")
     if music is not None:
-        if not isinstance(music, dict) or not music.get("path") or not (music.get("provenance") or {}).get("rights"):
-            raise FitnessError("channel.music needs path and provenance.rights (licensed music only), or null")
+        generated = isinstance(music, dict) and music.get("provider") == "lyria"
+        if not generated and (not isinstance(music, dict) or not music.get("path") or not (music.get("provenance") or {}).get("rights")):
+            raise FitnessError('channel.music needs path and provenance.rights (licensed music), {"provider": "lyria"} (a new bed per video), or null')
+        if not isinstance(music.get("duck", {}), (dict, bool)):
+            raise FitnessError("channel.music.duck must be an object of sidechain settings or false")
+    sfx = channel.get("sfx")
+    if sfx is not None and (not isinstance(sfx, dict) or not isinstance(sfx.get("gain_db", 0), (int, float))):
+        raise FitnessError('channel.sfx must be {"pack": "sfx", "gain_db": 0} (build it with `channel sfx-pack`) or null')
+    motion = channel.get("motion") or {}
+    if motion.get("transition", "blur") not in ("blur", "swipe", "impact", "fade", "cut"):
+        raise FitnessError("channel.motion.transition must be blur, swipe, impact, fade or cut")
     characters = channel.get("characters")
     if not isinstance(characters, dict) or not characters:
         raise FitnessError("channel.characters must define at least one character")
@@ -179,10 +188,10 @@ def identity(channel: dict, preset: str | None = None) -> dict:
         files = [path(p) for p in spec.get("references", [])]
         characters[character_id] = {**spec, "reference_sha256": [file_hash(p) if p.is_file() else None for p in files]}
     music = channel.get("music")
-    if music:
+    if music and music.get("path"):
         bed = path(music["path"])
         music = {**music, "sha256": file_hash(bed) if bed.is_file() else None}
-    return {
+    profile = {
         "palette": channel["palette"],
         "fps": channel["fps"],
         "gap": channel.get("scene_gap_seconds", 0.35),
@@ -193,6 +202,11 @@ def identity(channel: dict, preset: str | None = None) -> dict:
         "image": channel.get("image", {}),
         "music": music,
     }
+    # Only when set, so channels approved before SFX and motion settings existed keep their approval.
+    for key in ("sfx", "motion"):
+        if channel.get(key):
+            profile[key] = channel[key]
+    return profile
 
 
 def channel_digest(channel: dict, preset: str | None = None) -> str:

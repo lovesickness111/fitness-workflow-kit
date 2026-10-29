@@ -23,7 +23,10 @@
   }[S.aspect];
   if (S.tag) Object.assign(LAYOUT, LAYOUT.tagged);  // the pinned tag owns the corner; the badge moves below it
   const shown = c => t => !c ? 0 : eo((t - c.at) / .35) * (c.until == null ? 1 : 1 - clamp((t - c.until) / .25));
-  const barsShown = t => Math.max(shown(S.bars)(t), shown(S.meter)(t));  // bars and meter take over the info slot
+  // bars, meter and the hold bar / angle / switch panels take over the info slot
+  const barsShown = t => Math.max(shown(S.bars)(t), shown(S.meter)(t), shown(S.holdbar)(t), shown(S.angle)(t), shown(S.switch)(t));
+  // Scene transition: in = blur | swipe | impact | fade | cut, out = blur | none (see scenes.py)
+  const TR = S.transition || { in: 'fade', out: 'none' };
   const COLOR = name => P[name] || name || P.ink;
   const NUMBER = /^([+-]?)(\d+(?:\.\d+)?)(%|x|×|s)?$/;
   const countUp = (m, g) => m[1] + (parseFloat(m[2]) * g).toFixed((m[2].split('.')[1] || '').length) + (m[3] || '');
@@ -38,6 +41,22 @@
   const updates = [];
   const waits = [document.fonts.ready];
 
+  // Neon on accent words only: layered glow in the word's own colour; k > 1 while it flares in.
+  const rgb = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const rgba = (c, a) => `rgba(${c.join(',')},${clamp(a).toFixed(3)})`;
+  function glow(color, k = 1) {
+    const c = rgb(color); if (!c || S.glow === false) return '0 .06em .5em rgba(0,0,0,.95)';
+    return [`0 0 .04em ${rgba(c, 1)}`, `0 0 ${(.12 + .08 * k).toFixed(3)}em ${rgba(c, .9)}`,
+      `0 0 ${(.3 + .2 * k).toFixed(3)}em ${rgba(c, .7)}`, `0 0 ${(.7 + .5 * k).toFixed(3)}em ${rgba(c, .45 * k)}`, '0 .06em .5em rgba(0,0,0,.9)'].join(',');
+  }
+  // Flare of an accent word appearing at t0: the core burns toward white for ~0.1 s, then it settles and breathes.
+  function flare(s, t0, t) {
+    if (!s.dataset.kw || S.glow === false) return;
+    const d = t - t0, f = d < 0 ? 0 : d < .12 ? d / .12 : Math.exp(-(d - .12) * 5);
+    const k = .88 + .12 * Math.sin(Math.max(0, d) * 2 * Math.PI / 2.4) + .9 * f, c = rgb(s.dataset.kw);
+    s.style.textShadow = glow(s.dataset.kw, k);
+    if (c) s.style.color = `rgb(${c.map(v => Math.round(v + (255 - v) * .5 * f)).join(',')})`;
+  }
   // Highlight words: [{word, color}] matched case-insensitively ignoring punctuation.
   function words(parent, text, accent) {
     const map = new Map((accent || []).map(a => [a.word.toLowerCase().replace(/[^\p{L}\p{N}%+-]/gu, ''), COLOR(a.color)]));
@@ -47,7 +66,9 @@
       if (/^\s+$/.test(part)) { parent.appendChild(document.createTextNode(' ')); return; }
       const s = el('span', 'w', parent); s.textContent = part;
       const key = part.toLowerCase().replace(/[^\p{L}\p{N}%+-]/gu, '');
-      s.style.color = map.get(key) || P.ink;
+      const color = map.get(key);
+      s.style.color = color || P.ink;
+      if (color) { s.dataset.kw = color; s.style.textShadow = glow(color); }
       spans.push(s);
     });
     return spans;
@@ -135,7 +156,7 @@
       const jy = A * strain * (Math.sin(t * 37.1 + .5) * .6 + Math.sin(t * 19.7 + 2.3) * .4) * .7;
       const rot = strain * p.jitter * .18 * Math.sin(t * 29.3 + .9);
       cam.style.transform = `translate(${px(jx)},${px(jy)}) rotate(${rot.toFixed(3)}deg) scale(${z.toFixed(5)})`;
-      box.style.opacity = (eo(t / .25) * (1 - p.dim) * (1 - LAYOUT.barsDim * barsShown(t))).toFixed(4);
+      box.style.opacity = ((TR.in === 'fade' ? eo(t / .25) : 1) * (1 - p.dim) * (1 - LAYOUT.barsDim * barsShown(t))).toFixed(4);
       glow(t);
     });
   }
@@ -244,6 +265,88 @@
     });
   }
 
+  // -- hold bar: big live seconds over one segment per second; optional fail ("touch = stop") ------
+  if (S.holdbar) {
+    const c = S.holdbar, e = el('div', 'abs holdbar'); place(e, LAYOUT.bars);
+    const f = LAYOUT.barSize * W * 1.1, goal = c.goal || 10;
+    Object.assign(e.style, { fontSize: px(f), padding: px(f * .8) });
+    el('div', 'head', e).textContent = c.label || 'HOLD';
+    const num = el('div', 'num', e); num.style.fontSize = px(f * 3.2);
+    const segs = el('div', 'segs', e), cells = Array.from({ length: goal }, () => el('div', 'seg', segs));
+    const fail = el('div', 'fail', e); words(fail, c.stop_label || 'Touch = stop', [{ word: (c.stop_label || 'Touch = stop').split(' ')[0], color: 'highlight' }]);
+    fail.style.fontSize = px(f * 1.1);
+    updates.push(t => {
+      e.style.opacity = shown(c)(t).toFixed(3);
+      const end = c.stop_at ?? Infinity, sec = Math.min(goal, Math.max(0, Math.min(t, end) - c.run_at) * (c.speed || 1));
+      const failed = t >= end, done = sec >= goal - 1e-6, col = failed ? P.highlight : done ? P.accent : P.ink;
+      num.textContent = `${sec.toFixed(1)}s`; num.style.color = col;
+      num.style.textShadow = failed || done ? glow(col, 1.2) : '0 .06em .5em rgba(0,0,0,.9)';
+      cells.forEach((s, i) => { const k = clamp(sec - i); s.style.background = `linear-gradient(90deg, ${failed ? P.highlight : P.signature} ${k * 100}%, #1f1f1f ${k * 100}%)`; });
+      const a = failed ? (t - end) / .25 : 0;
+      fail.style.opacity = failed ? '1' : '0'; fail.style.transform = `scale(${(1.6 - .6 * eo(a)).toFixed(3)})`;
+      if (failed) fail.querySelectorAll('.w').forEach(s => flare(s, end, t));
+    });
+  }
+
+  // -- angle: a neon L; the vertical stroke draws, the leg swings to each step's angle ----------
+  if (S.angle) {
+    const c = S.angle, e = el('div', 'abs angle'); place(e, LAYOUT.bars);
+    const D = Math.min(LAYOUT.bars[2] * W * .55, H * .32), sw = D * .08;
+    e.innerHTML = `<svg width="${D * 1.1}" height="${D * 1.25}" viewBox="${-sw} ${-sw} ${D * 1.1} ${D * 1.25}" style="overflow:visible"><line class="up" stroke-linecap="round" stroke-width="${sw}"/><line class="leg" stroke-linecap="round" stroke-width="${sw}"/></svg>`;
+    const up = e.querySelector('.up'), leg = e.querySelector('.leg');
+    const deg = el('div', 'deg', e); deg.style.fontSize = px(D * .12);
+    const lab = c.label ? el('div', 'lab', e) : null;
+    const lspans = lab ? words(lab, c.label, c.accent) : [];
+    if (lab) lab.style.fontSize = px(D * .13);
+    updates.push(t => {
+      e.style.opacity = shown(c)(t).toFixed(3);
+      let d = -90;
+      for (const st of c.steps) d += (st.deg - d) * (t < st.at ? 0 : back((t - st.at) / .5));
+      const draw = eo((t - c.at) / .4), len = D * eo((t - c.at - .25) / .35), r = d * Math.PI / 180, lit = d > -8;
+      const col = lit ? P.highlight : '#bdbdbd';
+      up.setAttribute('x1', 0); up.setAttribute('y1', D * (1 - draw)); up.setAttribute('x2', 0); up.setAttribute('y2', D); up.setAttribute('stroke', P.ink);
+      leg.setAttribute('x1', 0); leg.setAttribute('y1', D); leg.setAttribute('x2', len * Math.cos(r)); leg.setAttribute('y2', D - len * Math.sin(r)); leg.setAttribute('stroke', col);
+      leg.style.filter = `drop-shadow(0 0 ${px(sw * (lit ? 1.2 : .3))} ${col})`;
+      deg.textContent = `${Math.round(90 + d)}°`; deg.style.color = col;
+      if (lab) { lab.style.marginTop = px(Math.max(0, -len * Math.sin(r) - D * .1)); lab.style.opacity = eo((t - c.at - .5) / .3).toFixed(3); lspans.forEach(s => flare(s, c.at + .5, t)); }
+    });
+  }
+
+  // -- switch: EASIER / HARDER; the knob slides to the active side and that side's text shows ------
+  if (S.switch) {
+    const c = S.switch, e = el('div', 'abs switch'); place(e, LAYOUT.bars);
+    const f = LAYOUT.barSize * W * 1.1; e.style.fontSize = px(f);
+    const row = el('div', 'row', e), easy = el('span', 'side', row); easy.textContent = c.easy_label || 'EASIER';
+    const track = el('span', 'track', row), knob = el('span', 'knob', track), hard = el('span', 'side', row); hard.textContent = c.hard_label || 'HARDER';
+    const lines = c.steps.map(st => { const l = el('div', 'line', e); return { st, l, spans: words(l, st.text, st.accent) }; });
+    updates.push(t => {
+      e.style.opacity = shown(c)(t).toFixed(3);
+      const cur = [...c.steps].reverse().find(st => t >= st.at) || c.steps[0], i = c.steps.indexOf(cur);
+      const prev = i > 0 ? c.steps[i - 1].side : (cur.side === 'easy' ? 'hard' : 'easy'), side = s => (s === 'easy' ? 0 : 1);
+      const k = side(prev) + (side(cur.side) - side(prev)) * back((t - cur.at) / .35), col = cur.side === 'easy' ? P.accent : P.highlight;
+      knob.style.left = `${(6 + k * 52).toFixed(2)}%`; knob.style.background = col; knob.style.boxShadow = `0 0 .6em ${col}`;
+      easy.style.color = cur.side === 'easy' ? P.accent : '#666'; hard.style.color = cur.side === 'hard' ? P.highlight : '#666';
+      lines.forEach(({ st, l, spans }) => { const on = st === cur; l.style.display = on ? 'block' : 'none'; if (on) { l.style.opacity = eo((t - st.at) / .25).toFixed(3); spans.forEach(s => flare(s, st.at, t)); } });
+    });
+  }
+
+  // -- dose chip: stopwatch + "20–30s × 3" + set dots, in the timer corner ---------------------------
+  if (S.dose) {
+    const c = S.dose, D = LAYOUT.timer[2] * W, e = el('div', 'abs dose');
+    place(e, [LAYOUT.timer[0] - (S.aspect === '9:16' ? .12 : .1), LAYOUT.timer[1]]); e.style.fontSize = px(D * .2);
+    e.innerHTML = `<svg width="${D * .42}" height="${D * .42}" viewBox="-42 -42 84 84"><circle r="34" fill="none" stroke="#555" stroke-width="6"/><rect x="-7" y="-46" width="14" height="8" rx="2" fill="#bbb"/><line class="hand" x1="0" y1="0" x2="0" y2="-26" stroke="${P.highlight}" stroke-width="5" stroke-linecap="round"/><circle r="5" fill="#fff"/></svg>`;
+    const box = el('div', 'txt', e), main = el('div', 'main', box); main.textContent = c.main;
+    const dots = el('div', 'dots', box), cells = Array.from({ length: c.sets || 0 }, () => el('span', 'dot', dots));
+    if (c.note) { const n = el('span', 'note', dots); n.textContent = c.note; }
+    const hand = e.querySelector('.hand');
+    updates.push(t => {
+      const a = (t - c.at) / .4, q = c.until == null ? 0 : clamp((t - c.until) / .25);
+      e.style.opacity = (clamp(a * 2.5) * (1 - q)).toFixed(3); e.style.transform = `scale(${(.6 + .4 * back(a)).toFixed(4)})`;
+      hand.setAttribute('transform', `rotate(${((t - c.at) * 120 % 360).toFixed(1)})`);
+      cells.forEach((s, i) => { const on = t > c.at + .5 + i * .35; s.style.background = on ? P.accent : '#333'; s.style.boxShadow = on ? `0 0 .4em ${P.accent}` : 'none'; });
+    });
+  }
+
   // -- pinned heading tag: static within a main idea, so it stays put across scene cuts ------
   // Where a new main idea starts (S.tagFrom set), the old line slides out and the new one slides in.
   if (S.tag) {
@@ -272,7 +375,7 @@
     fit(main, LAYOUT.title[3] * H * .8, LAYOUT.textSize * W * 1.5);
     updates.push(t => {
       const q = c.until == null ? 0 : clamp((t - c.until) / .25);
-      spans.forEach((s, i) => { const a = (t - c.at - i * .06) / .42; s.style.opacity = (clamp(a * 2.5) * (1 - q)).toFixed(3); s.style.transform = `translateY(${px((1 - eo(a)) * H * .03)}) scale(${(.7 + .3 * back(a)).toFixed(4)})`; });
+      spans.forEach((s, i) => { const a = (t - c.at - i * .06) / .42; s.style.opacity = (clamp(a * 2.5) * (1 - q)).toFixed(3); s.style.transform = `translateY(${px((1 - eo(a)) * H * .03)}) scale(${(.7 + .3 * back(a)).toFixed(4)})`; flare(s, c.at + i * .06, t); });
       if (sub) sub.style.opacity = (eo((t - c.at - .35) / .4) * (1 - q)).toFixed(3);
     });
   }
@@ -368,8 +471,39 @@
         const a = (t - c.at - i * .045) / .34;
         s.style.opacity = clamp(a * 3).toFixed(3);
         s.style.transform = `translateY(${px((1 - eo(a)) * H * .018)}) scale(${(.62 + .38 * back(a)).toFixed(4)})`;
+        flare(s, c.at + i * .045, t);
       });
     }));
+  }
+
+  // -- scene transition (applied to the whole stage; the cut sits between two scenes' blurs) -------------
+  // blur: defocus in 0.22 s (default, the reference channel's cut); swipe: rises from below with vertical motion blur;
+  // impact: 3 frames of inverted manga flash with speed lines, then a zoom-blur slam; out blur: defocus over the last 0.14 s.
+  {
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', 0); svg.setAttribute('height', 0); svg.style.position = 'absolute';
+    svg.innerHTML = '<filter id="vblur" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur id="vblurdev" stdDeviation="0 0"/></filter>';
+    document.body.appendChild(svg);
+    const dev = svg.querySelector('#vblurdev');
+    const lines = el('div', 'speedlines', document.body);
+    Object.assign(lines.style, { position: 'absolute', left: 0, top: 0, width: px(W), height: px(H), display: 'none', pointerEvents: 'none' });
+    updates.push(t => {
+      let blur = 0, ty = 0, scale = 1, vb = 0, invert = false;
+      if (TR.in === 'blur') blur += 14 * (1 - eo(t / .22));
+      if (TR.in === 'swipe') { const a = eo(t / .32); ty = (1 - a) * H * .16; vb = 28 * (1 - a); }
+      if (TR.in === 'impact') {
+        if (t < .1) invert = true;
+        else { const a = eo((t - .1) / .35); scale = 1 + .14 * (1 - a); blur += 10 * (1 - a); }
+      }
+      if (TR.out === 'blur') blur += 12 * clamp((t - (T - .14)) / .14);
+      const filters = [];
+      if (invert) filters.push('invert(1) contrast(1.4)');
+      if (blur > .05) filters.push(`blur(${px(blur)})`);
+      if (vb > .2) { dev.setAttribute('stdDeviation', `0 ${vb.toFixed(1)}`); filters.push('url(#vblur)'); }
+      stage.style.filter = filters.join(' ') || 'none';
+      stage.style.transform = ty || scale !== 1 ? `translateY(${px(ty)}) scale(${scale.toFixed(4)})` : 'none';
+      lines.style.display = invert ? 'block' : 'none';
+    });
   }
 
   window.DURATION = T;

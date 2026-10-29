@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 
 from . import channel as channel_profile
+from . import music as music_beds
+from . import sfx as sfx_effects
 from .common import FitnessError, file_hash, now, probe, run, write_json
 
 
@@ -45,19 +47,33 @@ def _mix(project, work: Path, seconds: float) -> Path:
     graph = "[0:a]aformat=channel_layouts=stereo,aresample=48000[voice]"
     inputs = ["-i", narration]
     mixed = "[voice]"
-    if music:
-        bed = channel_profile.path(music["path"])
+    source = music_beds.bed(project)
+    if source:
+        bed, loop = source
         if not bed.is_file():
             raise FitnessError(f"Music bed not found: {bed}")
-        inputs += ["-stream_loop", "-1", "-i", bed]
+        inputs += (["-stream_loop", "-1"] if loop else []) + ["-i", bed]
         gain = float(music.get("gain_db", -16))
-        duck = {**DUCK, **(music.get("duck") or {})}
         graph += (f";[1:a]aformat=channel_layouts=stereo,aresample=48000,volume={gain}dB,afade=t=in:d=1.5,"
-                  f"afade=t=out:st={max(0, seconds - 2.5):.3f}:d=2.5[bed];[voice]asplit=2[voice][key];"
-                  f"[bed][key]sidechaincompress=threshold={duck['threshold']}:ratio={duck['ratio']}:"
-                  f"attack={duck['attack']}:release={duck['release']}[ducked];"
-                  "[voice][ducked]amix=inputs=2:duration=first:normalize=0[mix]")
+                  f"afade=t=out:st={max(0, seconds - 2.5):.3f}:d=2.5[bed]")
+        if music.get("duck") is False:  # a bed generated quiet enough sits under the voice without compression
+            graph += ";[voice][bed]amix=inputs=2:duration=first:normalize=0[mix]"
+        else:
+            duck = {**DUCK, **(music.get("duck") or {})}
+            graph += (f";[voice]asplit=2[voice][key];[bed][key]sidechaincompress=threshold={duck['threshold']}:ratio={duck['ratio']}:"
+                      f"attack={duck['attack']}:release={duck['release']}[ducked];"
+                      "[voice][ducked]amix=inputs=2:duration=first:normalize=0[mix]")
         mixed = "[mix]"
+    # Per-project SFX track (audio/sfx.wav), timed to the scenes and never ducked; rebuilt from the
+    # scene configs when the channel has an SFX pack, otherwise a hand-made file is used as it is.
+    sfx_effects.build_track(project)
+    sfx = project.path("audio/sfx.wav")
+    if sfx.is_file():
+        index = inputs.count("-i")
+        inputs += ["-i", sfx]
+        graph += (f";[{index}:a]aformat=channel_layouts=stereo,aresample=48000[sfx];"
+                  f"{mixed}[sfx]amix=inputs=2:duration=first:normalize=0[withsfx]")
+        mixed = "[withsfx]"
     target = ":".join(f"{k}={v}" for k, v in LOUDNESS.items())
     measure = run(["ffmpeg", "-hide_banner", "-nostats", *inputs, "-filter_complex",
                    f"{graph};{mixed}loudnorm={target}:print_format=json[out]", "-map", "[out]", "-t", f"{seconds:.6f}", "-f", "null", "-"])
@@ -130,6 +146,7 @@ def final(project) -> dict:
         "approvals": project.state["approvals"], "voice": {k: v for k, v in channel_profile.voice_config(project.channel, project.voice_preset).items() if k in ("service", "voice_id", "voice_name", "model_id", "voice")},
         "audio": {k: v["sha256"] for k, v in project.state["audio"].items()},
         "poses": {k: {"sha256": v["sha256"], "model": v.get("model")} for k, v in project.state["poses"].items()},
-        "scenes": record["scenes"], "music": project.channel.get("music"), "created_at": record["created_at"],
+        "scenes": record["scenes"], "music": project.state.get("music") if music_beds.generated(project.channel) else project.channel.get("music"),
+        "created_at": record["created_at"],
     })
     return record
