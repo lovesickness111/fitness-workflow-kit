@@ -66,6 +66,14 @@ The heading is drawn in the top-left corner: a small red bar, then the line in u
 | `plan` | A row of pose cards: `{title, sub, items: [{pose, label, color}], stagger, beat}`. Fills the stage. |
 | `table` | Tier or step table: `{title, sub, rows: [{left, right, color}], stagger, beat}`. Fills the stage. Use your own scales, never another channel's. |
 | `meter` | Segmented effort meter in the info slot: `{label, value, max (10), caption, beat, until}`. Green, yellow, red as it fills; it replaces phrases while shown. |
+| `holdbar` | Self-test clock in the info slot: big live seconds over one segment per second. `{label, goal (10), beat/at (panel in), run_at/run_beat (clock starts), speed (1), stop_at/stop_beat (optional fail: turns red with stop_label, default "Touch = stop"), until}`. Turns green when the goal is reached. |
+| `angle` | A neon L in the info slot: the torso stroke draws, the leg swings from hanging (-90°) to each step's angle; level (0°) glows red. `{label, accent, steps: [{deg, beat/at}], beat, until}`. Use for L-sits, leg raises, hip angles. |
+| `switch` | Easier / harder knob in the info slot, one line of text per side: `{steps: [{side: easy\|hard, text, accent, beat/at}], easy_label, hard_label, until}`. Replaces the "Too hard? Too easy?" lines. |
+| `dose` | Stopwatch chip in the timer corner: `{main: "20–30s × 3", sets: 3, note: "REST 1 MIN", beat, until}`; the set dots light one by one. Not in the same scene as `timer`. |
+| `transition` | How the scene comes in: `blur` (default, 0.22 s defocus), `swipe` (from below, vertical motion blur), `impact` (inverted manga flash + zoom-blur slam), `cut`, `fade`. The previous scene blurs out only into a blur entry. |
+| `impact` | `true` = `transition: "impact"`. 3–4 per video, on the biggest lines. |
+
+The holdbar, angle and switch panels share the info slot with bars and meter: kinetic phrases hide while one shows. Give them `until`/`until_beat` when phrases should come back in the same scene.
 
 Full-stage components (`split`, `plan`, `table`) push kinetic phrases to the band below them. Use one per scene.
 

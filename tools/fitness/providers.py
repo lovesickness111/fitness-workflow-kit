@@ -263,6 +263,63 @@ def crop_to_aspect(image, aspect: str):
     return image.crop((0, y, w, y + new_h))
 
 
+# -- OpenAI-compatible image gateway (local kit patch) -----------------------------------
+
+GATEWAY_SIZES = {"1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536"}
+
+
+def gateway_image(prompt: str, references: list[Path], aspect: str, *, base: str, model: str = "gpt-image-2.5-sunburst",
+                  timeout: int = 600) -> tuple[bytes, dict]:
+    """One image from an OpenAI-compatible `/images/edits` endpoint (key: IMAGE_GATEWAY_API_KEY), cropped to `aspect`.
+
+    API That bills images that are still drawing when the client gives up, so a timeout or 524 is uncertain, never retried.
+    """
+    import io
+
+    from PIL import Image
+
+    if not secret("IMAGE_GATEWAY_API_KEY"):
+        raise FitnessError("IMAGE_GATEWAY_API_KEY missing: double-click 2-Nhap-key.cmd")
+    if aspect not in CODEX_SIZES:
+        raise FitnessError(f"Gateway cannot make aspect {aspect}")
+    native = CODEX_SIZES[aspect]
+    framing = "" if native == aspect else f" Leave generous empty black space on all sides; the image will be cropped to {aspect}."
+    # API That serves images from api.apithat.dev, which skips Cloudflare's ~2 min cut (524) on apithat.dev.
+    # Rewritten here, not in channel.image, so existing pose fingerprints and the channel approval stay valid.
+    base = base.replace("://apithat.dev/", "://api.apithat.dev/")
+    files = [("image[]", (Path(r).name, Path(r).read_bytes(), "image/png")) for r in references]
+    data = {"model": model, "prompt": prompt + framing, "size": GATEWAY_SIZES[native]}
+    headers = {"Authorization": f"Bearer {secret('IMAGE_GATEWAY_API_KEY')}"}
+    try:
+        if files:
+            response = requests.post(f"{base.rstrip('/')}/images/edits", headers=headers, files=files, data=data, timeout=timeout)
+        else:  # illustrations have no references; edits needs at least one image
+            response = requests.post(f"{base.rstrip('/')}/images/generations", headers=headers, json=data, timeout=timeout)
+    except requests.ConnectTimeout:
+        raise FitnessError("Gateway could not be reached (connect timeout); nothing was sent") from None
+    except requests.RequestException as exc:
+        raise UncertainOutcome(f"Gateway image outcome is uncertain ({type(exc).__name__}); it may have been billed, check usage before retrying") from None
+    if response.status_code == 524:
+        raise UncertainOutcome("Gateway timed out at the proxy (HTTP 524); the image may have been billed, check usage before retrying")
+    if response.status_code >= 400:
+        raise FitnessError(f"Gateway {model} failed (HTTP {response.status_code}): {redact(response.text[:300], 'IMAGE_GATEWAY_API_KEY')}")
+    try:
+        item = response.json()["data"][0]
+    except (ValueError, KeyError, IndexError):
+        raise FitnessError("Gateway returned no image") from None
+    if item.get("b64_json"):
+        raw = base64.b64decode(item["b64_json"])
+    elif item.get("url"):
+        raw = requests.get(item["url"], timeout=120).content
+    else:
+        raise FitnessError("Gateway returned no image")
+    image = Image.open(io.BytesIO(raw)).convert("RGB")
+    w, h = image.size
+    buffer = io.BytesIO()
+    crop_to_aspect(image, aspect).save(buffer, format="PNG")
+    return buffer.getvalue(), {"model": model, "native": [w, h], "generation_id": item.get("generation_id")}
+
+
 def generate_image(image_config: dict, prompt: str, references: list[Path], aspect: str) -> tuple[bytes, dict]:
     """Configured provider first (`codex` by default), then the configured fallback (`gemini`).
 
@@ -278,6 +335,9 @@ def generate_image(image_config: dict, prompt: str, references: list[Path], aspe
                 data = gemini_image(image_config.get("model", "gemini-3.1-flash-image"), prompt,
                                     [Path(r).read_bytes() for r in references], aspect, image_config.get("size", "1K"))
                 meta = {"model": image_config.get("model", "gemini-3.1-flash-image")}
+            elif provider == "gateway":
+                data, meta = gateway_image(prompt, references, aspect, base=image_config.get("gateway_base", "https://api.apithat.dev/v1"),
+                                           model=image_config.get("gateway_model", "gpt-image-2.5-sunburst"))
             else:
                 raise FitnessError(f"Unknown image provider {provider}")
             return data, {"provider": provider, **meta, **({"fallback_reason": errors[-1]} if errors else {})}

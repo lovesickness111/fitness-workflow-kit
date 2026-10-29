@@ -107,6 +107,9 @@ def scene_config(project, segment: dict) -> dict:
         config[name] = item
 
     _extended_components(project, scene, config, overrides, beats, seconds, sid)
+    _hud_panels(scene, config, overrides, beats, sid)
+    config["transition"] = transition(project, segment)
+    config["glow"] = bool((project.channel.get("motion") or {}).get("keyword_glow", True))
     tag = project.tags()[sid]
     if tag["text"]:
         config["tag"] = tag["text"]
@@ -217,6 +220,65 @@ def _extended_components(project, scene: dict, config: dict, overrides: dict, be
         at, _ = _when(c, overrides.get("table"), beats, 0.2, "table", sid)
         config["table"] = {"title": c.get("title"), "sub": c.get("sub"), "accent": c.get("accent", []), "at": at,
                            "stagger": c.get("stagger", 0.35), "rows": c["rows"]}
+
+
+TRANSITIONS = ("blur", "swipe", "impact", "fade", "cut")
+
+
+def _entry(project, scene: dict) -> str:
+    """How a scene comes in: its own `transition`, `impact: true`, else the video/channel default (blur)."""
+    if scene.get("impact"):
+        return "impact"
+    name = scene.get("transition") or project.brief.get("transition") or (project.channel.get("motion") or {}).get("transition") or "blur"
+    if name not in TRANSITIONS:
+        raise FitnessError(f"{scene.get('segment_id')}: transition must be one of {', '.join(TRANSITIONS)}")
+    return name
+
+
+def transition(project, segment: dict) -> dict:
+    """Entry of this scene plus its exit, which mirrors the next scene: a blur exit only into a blur entry,
+    so cuts into an impact frame, a swipe or a hard cut stay sharp."""
+    ids = [s["id"] for s in project.segments]
+    index = ids.index(segment["id"])
+    entry = _entry(project, project.scene_for(segment["id"]))
+    following = _entry(project, project.scene_for(ids[index + 1])) if index + 1 < len(ids) else None
+    return {"in": entry, "out": "blur" if following == "blur" else "none"}
+
+
+def _hud_panels(scene: dict, config: dict, overrides: dict, beats, sid: str) -> None:
+    """Hold bar, angle gauge and easier/harder switch (info slot), and the dose chip (timer corner)."""
+    first = beats[min(1, len(beats) - 1)]
+    if scene.get("holdbar"):
+        c = scene["holdbar"]
+        at, until = _when(c, overrides.get("holdbar"), beats, first, "holdbar", sid)
+        run_at = _at({"at": c.get("run_at"), "beat": c.get("run_beat")}, None, beats, at + .4, "holdbar.run", sid)
+        stop_at = None
+        if c.get("stop_at") is not None or c.get("stop_beat") is not None:
+            stop_at = _at({"at": c.get("stop_at"), "beat": c.get("stop_beat")}, None, beats, 0, "holdbar.stop", sid)
+        config["holdbar"] = {"label": c.get("label", "HOLD"), "goal": int(c.get("goal", 10)), "speed": float(c.get("speed", 1)),
+                             "run_at": run_at, "stop_at": stop_at, "stop_label": c.get("stop_label"), "at": at, "until": until}
+    if scene.get("angle"):
+        c = scene["angle"]
+        at, until = _when(c, overrides.get("angle"), beats, first, "angle", sid)
+        steps = [{"deg": float(st["deg"]), "at": _at(st, None, beats, at + .5 + i * .6, f"angle.steps.{i}", sid)}
+                 for i, st in enumerate(c.get("steps") or [{"deg": 0}])]
+        config["angle"] = {"label": c.get("label"), "accent": c.get("accent", []), "steps": steps, "at": at, "until": until}
+    if scene.get("switch"):
+        c = scene["switch"]
+        steps = []
+        for i, st in enumerate(c["steps"]):
+            if st.get("side") not in ("easy", "hard"):
+                raise FitnessError(f"{sid}.switch.steps.{i}: side must be easy or hard")
+            steps.append({"side": st["side"], "text": st["text"], "accent": st.get("accent", []),
+                          "at": _at(st, None, beats, first + i * 2.0, f"switch.steps.{i}", sid)})
+        at, until = _when(c, overrides.get("switch"), beats, steps[0]["at"] - .1, "switch", sid)
+        config["switch"] = {"steps": steps, "easy_label": c.get("easy_label"), "hard_label": c.get("hard_label"), "at": at, "until": until}
+    if scene.get("dose"):
+        if scene.get("timer"):
+            raise FitnessError(f"{sid}: dose and timer share the top-right corner; use one per scene")
+        c = scene["dose"]
+        at, until = _when(c, overrides.get("dose"), beats, first, "dose", sid)
+        config["dose"] = {"main": c["main"], "sets": int(c.get("sets", 0)), "note": c.get("note"), "at": at, "until": until}
 
 
 def scene_html(config: dict) -> str:

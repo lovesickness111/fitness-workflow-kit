@@ -74,7 +74,9 @@ def draft(project) -> dict:
         research.append(f"- {source.get('short') or source['title']}: {'; '.join(used)}. {link}" if used else f"- {source.get('short') or source['title']}. {link}")
     music = project.channel.get("music")
     credits = []
-    if music:  # a public credit line, never the internal provenance note
+    if music and music.get("provider") == "lyria":
+        credits.append(music.get("credit") or "Music: original instrumental made for this video with Google Lyria")
+    elif music:  # a public credit line, never the internal provenance note
         source = music["provenance"]["source"]
         credits.append(music.get("credit") or ("Music: original instrumental made with Google Lyria" if "lyria" in source.lower()
                                                else f"Music: {source.split(' (')[0]}"))

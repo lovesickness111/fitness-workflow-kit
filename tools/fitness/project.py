@@ -19,7 +19,8 @@ ASPECTS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 GATES = ("content", "media", "render")
 SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 SCENE_KEYS = {"segment_id", "pose", "title", "badge", "timer", "bars", "warning", "text", "tendons", "jitter", "zoom", "dim",
-              "labels", "marks", "inset", "split", "plan", "table", "meter", "tag"}
+              "labels", "marks", "inset", "split", "plan", "table", "meter", "tag",
+              "holdbar", "angle", "switch", "dose", "transition", "impact"}
 FULL_STAGE = ("split", "plan", "table")
 
 

@@ -15,6 +15,7 @@ $keys = [ordered]@{
     'ZERNIO_API_KEY'           = 'Zernio - đăng bài lên TikTok/YouTube/Facebook/LinkedIn (zernio.com > API keys)'
     'ZERNIO_API_KEY_SECONDARY' = 'Zernio profile thứ hai - chỉ cần khi dùng hai profile Zernio'
     'ELEVENLABS_API_KEY'       = 'ElevenLabs - chuyển lời nói thành chữ cho video tự quay (elevenlabs.io > API keys)'
+    'IMAGE_GATEWAY_API_KEY'    = 'Gateway ảnh tương thích OpenAI (vd. apithat.dev) - vẽ ảnh nhân vật thay cho Gemini'
 }
 Write-Host 'Dán từng key rồi nhấn Enter. Ký tự sẽ không hiện ra. Để trống và nhấn Enter nếu muốn giữ giá trị cũ hoặc bỏ qua.'
 foreach ($name in $keys.Keys) {

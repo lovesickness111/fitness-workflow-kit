@@ -19,7 +19,11 @@
       "name": "Hero",
       "description": "athletic lean muscular young man, short dark messy hair, focused expression, barefoot, bare-chested, wearing only plain athletic shorts",
       "references": [],
-      "signature": {"item": "shorts", "name": "flat vivid orange", "hex": "#FF5722"}
+      "signature": {
+        "item": "shorts",
+        "name": "flat vivid orange",
+        "hex": "#FF5722"
+      }
     }
   },
   "voice": {
@@ -30,7 +34,13 @@
       "provider": "elevenlabs",
       "model_id": "eleven_multilingual_v2",
       "language_code": "en",
-      "voice_settings": {"stability": 0.45, "similarity_boost": 0.75, "style": 0.3, "use_speaker_boost": true, "speed": 1.0}
+      "voice_settings": {
+        "stability": 0.45,
+        "similarity_boost": 0.75,
+        "style": 0.3,
+        "use_speaker_boost": true,
+        "speed": 1.0
+      }
     },
     "gemini": {
       "model": "gemini-3.1-flash-tts-preview",
@@ -38,6 +48,20 @@
       "style": "Confident, energetic fitness coach. Punchy emphasis on key words, short pauses before important points. Natural, never shouting."
     }
   },
-  "image": {"provider": "codex", "fallback": "gemini", "batch": false, "codex_model": "gpt-5.6-luna", "model": "gemini-3.1-flash-image", "size": "1K"},
-  "music": null
+  "image": {
+    "provider": "gateway",
+    "fallback": "gemini",
+    "batch": false,
+    "gateway_base": "https://api.apithat.dev/v1",
+    "gateway_model": "gpt-image-2.5-sunburst",
+    "codex_model": "gpt-5.6-luna",
+    "model": "gemini-3.1-flash-image",
+    "size": "1K"
+  },
+  "music": null,
+  "motion": {
+    "transition": "blur",
+    "keyword_glow": true
+  },
+  "sfx": null
 }
