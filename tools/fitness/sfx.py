@@ -17,15 +17,19 @@ from .common import CHANNEL_DIR, FitnessError, now, write_json
 
 
 SR = 48000
-CUES = ("whoosh-short", "whoosh", "pop", "click", "click-soft", "chime", "error", "ping", "notification",
+CUES = ("whoosh-short", "whoosh", "whip", "pop", "click", "click-soft", "chime", "error", "ping", "notification",
         "impact-bass-1", "impact-bass-2")
-# Default picks inside the free Mister Horse SFX pack (folder of .wav files); `--map cue=relative/file.wav` overrides.
+OPTIONAL = {"whip": "whoosh"}  # a pack without this cue plays the fallback cue instead
+LENGTHS = {"pop": 0.4, "click-soft": 0.3, "click": 0.3, "whoosh-short": 0.5, "whoosh": 0.6, "whip": 0.45,
+           "impact-bass-1": 2.5, "impact-bass-2": 3.0, "chime": 0.9, "error": 0.5, "notification": 0.6, "ping": 0.5}
+# Default picks inside the free Mister Horse SFX pack (folder of .wav files). A file named after the cue
+# (`whip.wav`, `chime.mp3`, ...) at the top of the pack folder wins; `--map cue=relative/file.wav` wins over both.
 MISTER_HORSE = {
-    "pop": ("Pop/Hollow Pop 02", 0.4), "click-soft": ("Click/Pen Click 01", 0.3), "click": ("Click/Mouse Click 04", 0.3),
-    "whoosh-short": ("Swoosh/Swoosh 02 - 02", 0.5), "whoosh": ("Swoosh/Swoosh 03 - 04", 0.6),
-    "impact-bass-1": ("Boom/Soft/Soft Cinematic Boom 06", 2.5), "impact-bass-2": ("Boom/Medium/Medium Cinematic Boom 04", 3.0),
-    "chime": ("Rewards/Bells 1 Upward 01", 0.9), "error": ("Doink/Deep Doink 03", 0.5),
-    "notification": ("Beep/Arpeggiated UI Beep 01", 0.6), "ping": ("Beep/Single UI Beep 06", 0.5),
+    "pop": "Pop/Hollow Pop 02", "click-soft": "Click/Pen Click 01", "click": "Click/Mouse Click 04",
+    "whoosh-short": "Swoosh/Swoosh 02 - 02", "whoosh": "Swoosh/Swoosh 03 - 04",
+    "impact-bass-1": "Boom/Soft/Soft Cinematic Boom 06", "impact-bass-2": "Boom/Medium/Medium Cinematic Boom 04",
+    "chime": "Rewards/Bells 1 Upward 01", "error": "Doink/Deep Doink 03",
+    "notification": "Beep/Arpeggiated UI Beep 01", "ping": "Beep/Single UI Beep 06",
 }
 BODY_RMS = 0.12  # every cue is levelled to the same body loudness; per-event volumes set the balance
 DEDUPE = 0.12    # one cue per 0.12 s window, the higher priority wins
@@ -67,18 +71,25 @@ def build_pack(channel: dict, source: Path, mapping: dict[str, str] | None = Non
     if not source.is_dir():
         raise FitnessError(f"SFX pack folder not found: {source}")
     target = CHANNEL_DIR / ((channel.get("sfx") or {}).get("pack") or "sfx")
-    picks = {cue: (f"{name}.wav", length) for cue, (name, length) in MISTER_HORSE.items()}
-    for cue, rel in (mapping or {}).items():
+    for cue in mapping or {}:
         if cue not in CUES:
             raise FitnessError(f"Unknown cue {cue}; cues are {', '.join(CUES)}")
-        picks[cue] = (rel, picks.get(cue, ("", 1.0))[1])
-    missing = [f"{cue} ({rel})" for cue, (rel, _) in picks.items() if not (source / rel).is_file()]
+    picks, missing = {}, []
+    for cue in CUES:
+        named = next((f"{cue}{ext}" for ext in (".wav", ".mp3", ".ogg", ".flac") if (source / f"{cue}{ext}").is_file()), None)
+        rel = (mapping or {}).get(cue) or named or (f"{MISTER_HORSE[cue]}.wav" if cue in MISTER_HORSE else None)
+        if rel and (source / rel).is_file():
+            picks[cue] = rel
+        elif cue not in OPTIONAL:
+            missing.append(f"{cue} ({rel})")
     if missing:
         raise FitnessError("Not in the pack: " + "; ".join(missing) + ". Map them with --map cue=relative/file.wav")
+    for stale in (c for c in OPTIONAL if c not in picks):  # an earlier pack's optional cue must not linger
+        (target / f"{stale}.wav").unlink(missing_ok=True)
     built = []
-    for cue, (rel, length) in picks.items():
+    for cue, rel in picks.items():
         a = _decode(source / rel)
-        a = a[int(np.argmax(np.abs(a) > np.abs(a).max() * 0.02)):][: int(length * SR)]
+        a = a[int(np.argmax(np.abs(a) > np.abs(a).max() * 0.02)):][: int(LENGTHS[cue] * SR)]
         fade = min(len(a) // 3, int(0.25 * SR))
         if fade:
             a[-fade:] *= np.linspace(1, 0, fade) ** 2
@@ -87,7 +98,7 @@ def build_pack(channel: dict, source: Path, mapping: dict[str, str] | None = Non
             a *= 0.89 / np.abs(a).max()
         _write_wav(target / f"{cue}.wav", np.stack([a, a], axis=1))
         built.append(cue)
-    write_json(target / "pack.json", {"source": source.name, "picks": {c: picks[c][0] for c in built}, "created_at": now()})
+    write_json(target / "pack.json", {"source": source.name, "picks": {c: picks[c] for c in built}, "created_at": now()})
     return built
 
 
@@ -106,7 +117,7 @@ def events(project) -> list[dict]:
         if index and entry == "blur":
             add(0.0, "whoosh-short", .22, 1)
         elif index and entry == "swipe":
-            add(0.0, "whoosh", .26, 5)  # a big move: wins over the first cue of the scene
+            add(0.0, "whip", .26, 5)  # a fast move: wins over the first cue of the scene
         if entry == "impact":
             add(0.0, "impact-bass-2", .32, 6)
         if c.get("tagFrom") is not None:
@@ -127,8 +138,8 @@ def events(project) -> list[dict]:
             add(c["warning"]["at"], "notification", .2, 3)
         if c.get("meter"):
             add(c["meter"]["at"], "click", .2, 3)
-        if c.get("inset"):
-            add(c["inset"]["at"], "whoosh-short", .18, 2)
+        if c.get("inset"):  # zooming into a detail gets the fuller whoosh
+            add(c["inset"]["at"], "whoosh", .2, 2)
         for name in ("split", "plan", "table"):
             if c.get(name):
                 add(c[name]["at"], "whoosh-short", .2, 2)
@@ -178,6 +189,8 @@ def build_track(project) -> Path | None:
     for event in timeline:
         if event["cue"] not in cache:
             path = folder / f"{event['cue']}.wav"
+            if not path.is_file() and event["cue"] in OPTIONAL:
+                path = folder / f"{OPTIONAL[event['cue']]}.wav"
             if not path.is_file():
                 raise FitnessError(f"SFX cue {event['cue']} missing in {folder}: run `channel sfx-pack --source <pack folder>`")
             cache[event["cue"]] = _decode(path, 2)

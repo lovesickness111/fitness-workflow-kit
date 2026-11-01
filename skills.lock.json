@@ -1,6 +1,6 @@
 {
   "kitFormat": 1,
-  "kitVersion": "0.3.4",
+  "kitVersion": "0.3.5",
   "repository": "https://github.com/lovesickness111/fitness-workflow-kit.git",
   "components": {
     "video-use": {
@@ -50,7 +50,7 @@
       "sha256": "75deb0d5d1de0fffcafd5c7703350628094c273f51f46cdd4132356cd9e5d3fe"
     },
     "fitness-explainer": {
-      "version": "0.12.2",
+      "version": "0.12.3",
       "paths": [
         ".agents/skills/fitness-explainer",
         ".claude/skills/fitness-explainer",
@@ -58,7 +58,7 @@
         "tools/fitness_video.py",
         "config/fitness"
       ],
-      "sha256": "5dbfd66bca4b41dd2d25bdfca65b3e361ad05d39e3be73308e85e85cc3c74734"
+      "sha256": "b60891a4f0f2ac5c92b6ad771f80b73b4077e747e595628d03f9d679565f76aa"
     },
     "codex-image": {
       "version": "1.0.0",

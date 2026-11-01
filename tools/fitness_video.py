@@ -463,7 +463,7 @@ def main() -> None:
     reference.add_argument("--image", required=True)
     reference.add_argument("--label")
     pack = actions.add_parser("sfx-pack", help="trim and level your own SFX pack into local/fitness/sfx")
-    pack.add_argument("--source", required=True, help="folder of the pack's .wav files (default picks: free Mister Horse pack)")
+    pack.add_argument("--source", required=True, help="pack folder: files named after the cues (whip.mp3, chime.wav, ...) or the free Mister Horse pack layout")
     pack.add_argument("--map", action="append", help="cue=relative/file.wav to override a pick; repeatable")
     actions.add_parser("review")
     approve = actions.add_parser("approve")

@@ -643,15 +643,20 @@ class EndToEndTests(unittest.TestCase):
         # Sound effects: a pack built from the creator's files, cues placed from the same scene configs.
         from fitness import sfx as sfx_effects, music as music_beds
         pack = TMP / "mh-pack"
-        for cue, (name, _) in sfx_effects.MISTER_HORSE.items():
+        for cue, name in sfx_effects.MISTER_HORSE.items():
             target = pack / f"{name}.wav"
             target.parent.mkdir(parents=True, exist_ok=True)
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=880:duration=0.6", str(target)], check=True)
         project.channel["sfx"] = {"pack": "sfx-test", "gain_db": 0}  # in memory only: the shared channel approval stays valid
-        self.assertEqual(len(sfx_effects.build_pack(project.channel, pack)), len(sfx_effects.MISTER_HORSE))
+        self.assertEqual(len(sfx_effects.build_pack(project.channel, pack)), len(sfx_effects.MISTER_HORSE), "whip is optional")
         timeline = sfx_effects.events(project)
         cues = {e["cue"] for e in timeline}
-        self.assertTrue({"impact-bass-2", "click", "error", "whoosh"} <= cues, cues)
+        self.assertTrue({"impact-bass-2", "click", "error", "whip"} <= cues, cues)
+        self.assertIsNotNone(sfx_effects.build_track(project), "a pack without whip plays the whoosh instead")
+        # A file named after the cue at the top of the pack wins over the Mister Horse default.
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=2000:duration=0.3", str(pack / "whip.mp3")], check=True)
+        self.assertIn("whip", sfx_effects.build_pack(project.channel, pack))
+        self.assertTrue((sfx_effects.pack_dir(project.channel) / "whip.wav").is_file())
         self.assertTrue(all(b["t"] - a["t"] >= sfx_effects.DEDUPE for a, b in zip(timeline, timeline[1:])))
         track = sfx_effects.build_track(project)
         with wave.open(str(track)) as w:

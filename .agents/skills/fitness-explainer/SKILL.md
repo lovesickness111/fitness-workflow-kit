@@ -46,7 +46,10 @@ References: [style guide](references/style-guide.md) (palette, pose prompts, lay
    - **A new bed for every video (recommended)**: `"music": {"provider": "lyria", "gain_db": -18, "duck": false}`. Each video sets `brief.music` and runs `music` (see One video). It uses the existing `GEMINI_API_KEY`; Lyria output carries Google's SynthID watermark, so tell the creator to check the Gemini API terms before monetising.
    - **Licensed track**: `channel.music` with `path` under `local/fitness/`, `gain_db` and `provenance.source/rights`. Reuse only music whose rights the creator confirmed. It loops from the start.
    - `duck: false` mixes the bed without sidechain compression (right for a bed generated quiet, about -18 dB); leave it out to keep the gentle ducking.
-5. Sound effects (optional, strongly recommended): the creator downloads a free pack they may use (for example the Mister Horse free pack), then `channel sfx-pack --source <folder with the .wav files> [--map cue=relative/file.wav]` trims, fades and levels 11 cues into `local/fitness/sfx/`. Set `"sfx": {"pack": "sfx", "gain_db": 0}`. Never ship or share the pack; each creator builds their own.
+5. Sound effects (optional, strongly recommended): the creator brings sounds they may use.
+   - Either a free pack such as the Mister Horse free pack (default file names), or a folder with one file per cue named after it: `whoosh-short`, `whoosh`, `whip`, `pop`, `click`, `click-soft`, `chime`, `error`, `ping`, `notification`, `impact-bass-1`, `impact-bass-2` (`.wav`, `.mp3`, `.ogg` or `.flac`). Keep the sounds and a note of their source and license under ignored `local/fitness/`.
+   - `channel sfx-pack --source <folder> [--map cue=relative/file.wav]` trims, fades and levels the cues into `local/fitness/sfx/`. `whip` is optional; without it, fast moves play `whoosh`.
+   - Set `"sfx": {"pack": "sfx", "gain_db": 0}`. Never ship or share the sounds; each creator builds their own.
 6. Motion defaults: `"motion": {"transition": "blur", "keyword_glow": true}` (both are the defaults; see the style guide).
 7. `channel review`, present palette, characters, voices, music, SFX and motion. Then `channel approve --decision "<their actual reply>"`; it binds to the digest that review printed. Changing a reference, voice, palette, music, SFX or motion makes it stale.
 
@@ -76,7 +79,12 @@ Approvals: `review --gate X` records the digest of what it printed. `approve --g
    - `review --gate media` writes `review/narration.mp3`. Send the user that file, `review/poses.png` and `review/storyboard.png` (and the bed). Record approval only after they listened and looked; never describe metrics or frame inspection as listening.
 4. **Render**:
    - `build` renders the scenes in parallel, builds `audio/sfx.wav` from the scene events when the channel has an SFX pack (`audio/sfx.json` lists every cue), assembles the compressed `render/preview.mp4` (final timing and mix) and measures it: size, LUFS, peak, music level between scenes, SFX peak, plus a frame sheet. Act on its notes.
-   - SFX map: scene entry blur → short whoosh, swipe → whoosh, impact → deep boom; title/labels/accent phrases → pop; plain phrases → soft click; badge → soft boom; timer and hold-bar start → click, goal → chime, hold-bar fail and ✕ → error, ✓ → chime; warning → notification; panels → short whoosh; angle reaching level → soft boom; switch → click; dose → pop. One cue per 0.12 s, the bigger event wins; volumes 0.14–0.32 under the voice.
+   - SFX map, one cue per 0.12 s (the bigger event wins), volumes 0.14–0.32 under the voice:
+     - Motion: scene entry blur → short whoosh; swipe → whip; impact → deep boom; zoom into a detail (`inset`) → whoosh; panels and a heading change → short whoosh.
+     - Text: title, labels and accent phrases → pop; plain phrases → soft click; badge → soft boom.
+     - Timers and controls: timer and hold-bar start → click, goal → chime; switch → click; angle reaching level → soft boom; dose → pop.
+     - Feedback: ✓ → chime ("ting"); hold-bar fail and ✕ → error; warning → notification.
+   - Sounds follow what is on screen, so give every line that states the right answer or the correct form a ✓ mark (`marks: [{"type": "check", ...}]`) and every common mistake a ✕. Use a `switch` for "press/toggle" moments, and `transition: "swipe"` for fast moves between ideas.
    - `review --gate render` repeats the measurements. Give the preview's absolute path so the user can open it (chat bridges that attach files also need the absolute path). Approve with the user's actual reply after they have watched and listened.
 5. **Final**:
    - `render` writes `render/final.mp4` and `render/delivery.json`, then checks the final at its real size.

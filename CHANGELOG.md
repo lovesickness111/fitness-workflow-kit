@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.5 (prerelease)
+
+Fitness (thành phần `fitness-explainer` 0.12.3): âm thanh theo chuyển động.
+
+- Âm mới `whip` cho chuyển động nhanh: cảnh lướt (`swipe`) giờ phát whip thay vì whoosh. Bộ âm không có `whip` thì vẫn phát whoosh như trước.
+- Zoom vào một chi tiết (ảnh cận `inset`) phát whoosh đầy hơn, thay cho whoosh ngắn.
+- `channel sfx-pack` nhận thêm thư mục có sẵn mỗi âm một file, đặt tên theo tên âm (`whip.mp3`, `chime.wav`, ...). Bố cục của bộ Mister Horse vẫn dùng được.
+- Skill: đặt dấu ✓ ở câu nói đúng (để phát tiếng "ting") và dấu ✕ ở lỗi thường gặp; dùng `switch` cho lúc bấm hoặc gạt, `swipe` cho chuyển ý nhanh.
+
 ## 0.3.4 (prerelease)
 
 Bản phát hành gộp 0.3.2 và 0.3.3, kèm các chỉnh sửa sau (thành phần `fitness-explainer` 0.12.2):
